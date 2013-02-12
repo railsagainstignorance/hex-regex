@@ -24,6 +24,7 @@ end
 
 load 'hex-regex.txt'
 
+
 puts "
 Summary:
 - #{Full_hex.instance.sides.length} sides
