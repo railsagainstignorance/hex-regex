@@ -1,0 +1,57 @@
+# assume
+# - all full_row regexp are anchored to left and right, e.g. /^.*H.*H.*$/
+# - all partial_left are anchored to left, e.g. /^H/
+# - ditto partial_right
+# - all chars are [A-Z]
+# - sides read from top RHS first, then round anti-clockwise
+
+# check for
+# - odd number of full_rows per side
+# - 3 sides
+# - same number of rows per side
+
+side
+full_row '.*H.*H.*'
+   partial_left 'H'
+full_row '(DI|NS|TH|OM)*'
+   partial_left  '(DI|NS|TH|OM){1}'
+   partial_left  '(DI|NS|TH|OM){2}'
+   partial_left  '(DI|NS|TH|OM){3}'
+   partial_right '(DI|NS|TH|OM){1}'
+   partial_right '(DI|NS|TH|OM){2}'
+   partial_right '(DI|NS|TH|OM){3}'
+full_row 'F.*[AO].*[AO].*'
+   partial_left  'F'
+   partial_left  'F.*[AO]'
+   partial_right '[AO].*'
+   partial_right '[AO].*[AO].*'
+full_row '(O|RHH|MM)*'
+   partial_left  '(O|RHH|MM){1}'
+   partial_left  '(O|RHH|MM){2}'
+   partial_left  '(O|RHH|MM){3}'
+   partial_left  '(O|RHH|MM){1}'
+   partial_right '(O|RHH|MM){1}'
+   partial_right '(O|RHH|MM){2}'
+   partial_right '(O|RHH|MM){3}'
+full_row '.*'
+full_row 'C*MC(CCC|MM)*'
+full_row '[^C]*[^R]*III.*'
+
+side
+full_row '.*G.*V.*H.*'
+full_row '[CR]*'
+full_row '.*XEXM*'
+full_row '.*DD.*CCM.*'
+full_row '.*XHCR.*X.*'
+full_row '.*(.)(.)(.)(.)\4\3\2\1.*'
+full_row '.*(IN|SE|HI)'
+
+side
+full_row '.*SE.*UE.*'
+full_row '.*LR.*RL.*'
+full_row '.*OXR.*'
+full_row '([^EMC]|EM)'
+full_row '(HHX|^HX)*'
+full_row '.*PRR.*DDC.*'
+full_row '.*'
+
