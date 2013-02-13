@@ -24,9 +24,13 @@ end
 
 load 'hex-regex.txt'
 
+if( ! Full_hex.instance.all_inputs_validated? )
+  puts  'Full_hex: input woes: '
+  Full_hex.instance.input_woes.each do |woe|
+    puts '- ' + woe + "\n"
+  end
+  puts
+  exit
+end
 
-puts "
-Summary:
-- #{Full_hex.instance.sides.length} sides
-- #{Full_hex.instance.sides.first.row_regexs.length} rows per side
-- missing some basic error checking"
+puts Full_hex.instance.summary
