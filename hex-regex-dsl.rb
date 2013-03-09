@@ -56,6 +56,29 @@ puts "\ncell score test: all cells' scores:\n"
 puts Cell.test_all_cells_rows_scores
 
 puts "\nfind a better letter test:\n"
-puts "total score = " + Row.total_score.to_s
+printf "total score = %5.2f\n", Row.total_score
 puts Cell.test_cell_find_a_better_letter
-puts "total score = " + Row.total_score.to_s
+printf "total score = %5.2f\n", Row.total_score
+
+puts "\nscan all cells to find better letters:\n"
+printf "total score = %5.2f\n", Row.total_score
+puts Cell.test_scan_all_cells_for_better_letters
+printf "total score = %5.2f\n", Row.total_score
+
+puts "\nscan all cells and report if any improvement:\n"
+printf "total score = %5.2f\n", Row.total_score
+found = Cell.find_a_better_letter_across_all_cells?
+if found
+  puts " improvement found\n"
+else
+  puts " none found\n"
+end
+printf "total score = %5.2f\n", Row.total_score
+
+puts "\nrepeatedly scan all cells until no more improvement:\n"
+printf "total score = %5.2f\n", Row.total_score
+iteration = 1
+while Cell.find_a_better_letter_across_all_cells?
+  printf "%d) total score = %5.2f\n", iteration, Row.total_score.to_s
+  iteration += 1
+end

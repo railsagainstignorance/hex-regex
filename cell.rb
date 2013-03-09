@@ -41,6 +41,15 @@ class Cell
 	    end
 	end
 
+	def self.test_scan_all_cells_for_better_letters
+		@@ALL_CELLS.map{ |c| Cell.test_cell_find_a_better_letter(c) }.join("\n")
+	end
+
+	def self.find_a_better_letter_across_all_cells?
+		improvements = @@ALL_CELLS.map { |c| c.find_a_better_letter? }.keep_if{|found| found}
+		! improvements.empty?
+	end
+
 	def initialize( letter = @@ALL_LETTERS[rand(26)] )
 		@letter = letter
 		@rows = []
