@@ -30,20 +30,12 @@ class Side
 
   def populate_hex(previous_side=nil)
       if previous_side.nil?
-        # generate the initial cells
-        num_rows = @row_regexs.length
-        minimum_row_length = (num_rows / 2).to_i + 1
-
-        @hex_rows = @row_regexs.each_with_index.map {|row_regex, i| 
-          row_length = i + minimum_row_length
-          if i >= minimum_row_length
-            row_length = num_rows + minimum_row_length -1 - i
-          end
-          Row.new(@id, row_regex, row_length)
-        }
+        previous_rows = Array.new( @row_regexs.length) # an array of nils, but the correct length
       else
         # copy from the previous side's cells
-          @hex_rows = @row_regexs.each_with_index.map {|row_regex, i| Row.new(@id, row_regex, i, previous_side.hex_rows)}
+        previous_rows = previous_side.hex_rows
       end
+
+      @hex_rows = @row_regexs.each_with_index.map {|row_regex, i| Row.new(@id, row_regex, i, previous_rows)}     
   end
 end
