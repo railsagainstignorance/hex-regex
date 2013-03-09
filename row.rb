@@ -46,23 +46,35 @@ class Row
 		@cells.each{ |cell| cell.add_to_row( self ) }
 	end
 
-	def to_s
-		@regex.to_s + ': ' + @cells.map { |item| item.to_s }.join(', ')
+	def to_s( max_cells = 7 )
+		if @cells.length > max_cells
+			padding = []
+		else
+			padding = [" "] * (max_cells- @cells.length)
+		end
+		sprintf( "%s%s%s : %s",
+				 padding.join(''),
+				 @cells.map { |item| item.to_s }.join(' '),
+				 padding.join(''),
+				 @regex.to_s 
+				 )
 	end
 end	
 
 # quick test
 
-rows = []
-num_rows = 7
-minimum_row_length = (num_rows / 2).to_i + 1
-puts "num_rows=#{num_rows}, minimum_row_length=#{minimum_row_length}\n"
-(0..minimum_row_length-1).each{ |i| rows << Row.new(Row_regex.new, minimum_row_length + i) }
-(minimum_row_length..num_rows-1).each{ |i| rows << Row.new(Row_regex.new, num_rows + minimum_row_length -1 -i) }
+def row_test
+	rows = []
+	num_rows = 7
+	minimum_row_length = (num_rows / 2).to_i + 1
+	puts "num_rows=#{num_rows}, minimum_row_length=#{minimum_row_length}\n"
+	(0..minimum_row_length-1).each{ |i| rows << Row.new(Row_regex.new, minimum_row_length + i) }
+	(minimum_row_length..num_rows-1).each{ |i| rows << Row.new(Row_regex.new, num_rows + minimum_row_length -1 -i) }
 
-puts rows
+	puts rows
 
-next_rows = (0..num_rows-1).map { |r| Row.new(Row_regex.new, r, rows) }
+	next_rows = (0..num_rows-1).map { |r| Row.new(Row_regex.new, r, rows) }
 
-puts "\n"
-puts next_rows
+	puts "\n"
+	puts next_rows
+end

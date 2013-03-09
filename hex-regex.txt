@@ -4,11 +4,13 @@
 # - ditto partial_right
 # - all chars are [A-Z]
 # - sides read from top RHS first, then round anti-clockwise
+# - infer the minimum row length from the number of rows per side
 
 # check for
 # - odd number of full_rows per side
 # - 3 sides
 # - same number of rows per side
+# - a partial_* having a row to belong to
 
 side
 full_row '.*H.*H.*'

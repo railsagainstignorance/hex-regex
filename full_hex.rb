@@ -28,17 +28,30 @@ class Full_hex
     @input_woes << "side 1 has #{rows_in_first_side} rows, but side 2 has #{rows_in_second_side} rows." if rows_in_second_side != rows_in_first_side
     @input_woes << "side 1 has #{rows_in_first_side} rows, but side 3 has #{rows_in_third_side} rows." if rows_in_third_side != rows_in_first_side
 
+    @input_woes << "must have an odd number of rows per side, but #{rows_in_first_side} is even" if rows_in_first_side.even?
+
     return @input_woes.length == 0
+  end
+
+  def minimum_row_length
+    (@sides.first.row_regexs.length / 2).to_i + 1
   end
 
   def summary
   "Full_hex: summary
 - #{sides.length} sides
 - #{sides.first.row_regexs.length} rows per side
+- minimum_row_length is #{minimum_row_length}
 "
   end
 
   def to_s
     (0..@sides.length-1).map{|i| "side #{i+1}\n" + @sides[i].to_s}.join("\n")
+  end
+
+  def populate_hex
+      @sides[0].populate_hex
+      @sides[1].populate_hex(@sides[0])
+      @sides[2].populate_hex(@sides[1])
   end
 end

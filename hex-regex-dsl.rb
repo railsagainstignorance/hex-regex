@@ -45,3 +45,8 @@ end
 puts Full_hex.instance.summary
 
 puts Full_hex.instance.to_s
+
+puts "\npopulating hex\n"
+Full_hex.instance.populate_hex
+
+puts Full_hex.instance.to_s
