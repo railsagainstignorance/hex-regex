@@ -1,4 +1,6 @@
 class Row_regex
+  attr_reader :full, :partials
+
   @@DEFAULT_PATTERN = '.*'
 
   def initialize( pattern = @@DEFAULT_PATTERN )
@@ -16,5 +18,9 @@ class Row_regex
 
   def to_s
     '/' + @full.source + "/ : " + @partials.map{|item| ' /' + item.source + '/'}.join(", ")
+  end
+
+  def all_regexs
+    [@full].concat(@partials)
   end
 end

@@ -48,3 +48,6 @@ puts Full_hex.instance.to_s
 
 puts "\ncell test: all cells' row ids:\n"
 puts Cell.all.map { |e| e.to_s + '[' + e.row_ids.join(',') + ']' }.join(', ')
+
+puts "\nrow score test: all rows' scores:\n"
+puts Row.all.map { |r| sprintf("<%s> %s", r.score.to_s, r.to_s) }.join("\n")

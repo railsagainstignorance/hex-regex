@@ -27,7 +27,7 @@ Approach
 TBD
 ===
 
-- check that the cells do in fact know which rows they are in
+- check that the cells do in fact know which rows they are in. DONE
 - a scoring fn for a row
 - score all the rows
 - identify a suitable cell

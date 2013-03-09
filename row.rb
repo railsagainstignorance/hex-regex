@@ -2,15 +2,21 @@ require File.dirname(__FILE__) + '/cell'
 require File.dirname(__FILE__) + '/row_regex'
 
 class Row
-	attr_reader :cells, :regex, :id
+	attr_reader :cells, :row_regex, :id
 
-	# this constructor can interpret nth in two ways: saying which slice of the existing_rows, or the length of the row if none
+	@@ALL_ROWS = []
+
+	def self.all
+		@@ALL_ROWS
+	end
+
+	# this constructor can existing_rows in two ways: a nil row means create a new Cell.
 	# NB, nth starts at 0
 
-	def initialize( id_prefix, regex, nth, existing_rows )
-		@id    = [id_prefix, nth].join('.')
-		@regex = regex
-		@cells = []
+	def initialize( id_prefix, row_regex, nth, existing_rows )
+		@id        = [id_prefix, nth].join('.')
+		@row_regex = row_regex
+		@cells     = []
 
 		# this is the clever bit which takes a slice across the existing rows
 		minimum_row_length = (existing_rows.length / 2).to_i + 1
@@ -45,6 +51,8 @@ class Row
 	
 		# make sure we link the row to the cell
 		@cells.each{ |cell| cell.add_to_row( self ) }
+
+		@@ALL_ROWS << self
 	end
 
 	def to_s( max_cells = 7 )
@@ -58,7 +66,20 @@ class Row
 				 padding.join(''),
 				 @cells.map { |item| item.to_s }.join(' '),
 				 padding.join(''),
-				 @regex.to_s 
+				 @row_regex.to_s 
 				 )
 	end
+
+	def string_of_cells
+		@cells.map { |c| c.letter }.join('')
+	end
+
+	def score
+		string = self.string_of_cells
+		score = 0
+		@row_regex.all_regexs.each{ |regex| score += 1 if regex.match(string) }
+		return score
+	end
+
+
 end	
