@@ -28,10 +28,11 @@ TBD
 ===
 
 - check that the cells do in fact know which rows they are in. DONE
-- a scoring fn for a row
-- score all the rows
-- identify a suitable cell
-- try all poss letter values, looks scores in the 3 intersecting rows
+- a scoring fn for a row. DONE
+- score all the rows. DONE
+- identify a suitable cell. DONE
+- try all poss letter values, looks scores in the 3 intersecting rows, for a cell. DONE
+- scan all the cells, looking to improve each one
 - pick a letter
 - iterate
 - fancy GUI? 

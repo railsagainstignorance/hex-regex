@@ -47,7 +47,15 @@ Full_hex.instance.populate_hex
 puts Full_hex.instance.to_s
 
 puts "\ncell test: all cells' row ids:\n"
-puts Cell.all.map { |e| e.to_s + '[' + e.row_ids.join(',') + ']' }.join(', ')
+puts Cell.test_all_cells_row_ids
 
 puts "\nrow score test: all rows' scores:\n"
-puts Row.all.map { |r| sprintf("<%s> %s", r.score.to_s, r.to_s) }.join("\n")
+puts Row.test_all_rows_scores
+
+puts "\ncell score test: all cells' scores:\n"
+puts Cell.test_all_cells_rows_scores
+
+puts "\nfind a better letter test:\n"
+puts "total score = " + Row.total_score.to_s
+puts Cell.test_cell_find_a_better_letter
+puts "total score = " + Row.total_score.to_s

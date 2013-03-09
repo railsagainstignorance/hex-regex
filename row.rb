@@ -10,6 +10,14 @@ class Row
 		@@ALL_ROWS
 	end
 
+	def self.test_all_rows_scores
+		Row.all.map { |r| sprintf("<%4.2f> %s", r.score.to_s, r.to_s) }.join("\n")
+	end
+
+	def self.total_score
+		Row.all.map { |r| r.score }.inject(:+)
+	end
+
 	# this constructor can existing_rows in two ways: a nil row means create a new Cell.
 	# NB, nth starts at 0
 
@@ -76,9 +84,10 @@ class Row
 
 	def score
 		string = self.string_of_cells
-		score = 0
-		@row_regex.all_regexs.each{ |regex| score += 1 if regex.match(string) }
-		return score
+		cumulative_score = 0
+		cumulative_score += 1 if @row_regex.full.match(string)
+		@row_regex.partials.each{ |regex| cumulative_score += 0.01 if regex.match(string) }
+		return cumulative_score
 	end
 
 
