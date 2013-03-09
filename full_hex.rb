@@ -46,7 +46,7 @@ class Full_hex
   end
 
   def to_s
-    (0..@sides.length-1).map{|i| "side #{i+1}\n" + @sides[i].to_s}.join("\n")
+    (0..@sides.length-1).map{|i| "side #{@sides[i].id}\n" + @sides[i].to_s}.join("\n")
   end
 
   def populate_hex

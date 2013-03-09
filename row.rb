@@ -2,12 +2,13 @@ require File.dirname(__FILE__) + '/cell'
 require File.dirname(__FILE__) + '/row_regex'
 
 class Row
-	attr_reader :cells, :regex
+	attr_reader :cells, :regex, :id
 
 	# this constructor can interpret nth in two ways: saying which slice of the existing_rows, or the length of the row if none
 	# NB, nth starts at 0
 
-	def initialize( regex, nth, existing_rows = [] )
+	def initialize( id_prefix, regex, nth, existing_rows = [] )
+		@id    = [id_prefix, nth].join('.')
 		@regex = regex
 		@cells = []
 
@@ -52,7 +53,8 @@ class Row
 		else
 			padding = [" "] * (max_cells- @cells.length)
 		end
-		sprintf( "%s%s%s : %s",
+		sprintf( "%s) %s%s%s : %s",
+		         @id,
 				 padding.join(''),
 				 @cells.map { |item| item.to_s }.join(' '),
 				 padding.join(''),
