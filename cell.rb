@@ -3,6 +3,26 @@ class Cell
 
 	@@ALL_LETTERS = ('A'..'Z').to_a
 	@@ALL_CELLS = []
+	@@ALL_CHANGES = []
+
+	def self.changes
+		@ALL_CHANGES
+	end	
+
+	def self.pp_changes( initial_score=nil )
+		initial_score = @@ALL_CHANGES.first[:previous_score] if initial_score.nil?
+		cumulative_score = initial_score
+
+		@@ALL_CHANGES.map { |ch| 
+			cumulative_score += ch[:next_score] - ch[:previous_score]
+			sprintf(
+				"[%s] %s-%s <%5.2f>-<%5.2f>, cumulative=<%5.2f>",
+				ch[:cell].row_ids.join(','),
+				ch[:previous_letter], ch[:next_letter],
+				ch[:previous_score],  ch[:next_score],
+				cumulative_score
+				) }.join("\n")
+	end
 
 	def self.all
 		@@ALL_CELLS
@@ -91,6 +111,13 @@ class Cell
 		end
 
 		if best_score > initial_score
+			@@ALL_CHANGES << { 
+				:cell            => self,
+				:previous_score  => initial_score,
+				:next_score      => best_score,
+				:previous_letter => initial_letter,
+				:next_letter     => best_letter
+				}
 			@letter = best_letter
 			return true
 		else
