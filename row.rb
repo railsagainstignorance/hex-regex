@@ -62,21 +62,3 @@ class Row
 				 )
 	end
 end	
-
-# quick test
-
-def row_test
-	rows = []
-	num_rows = 7
-	minimum_row_length = (num_rows / 2).to_i + 1
-	puts "num_rows=#{num_rows}, minimum_row_length=#{minimum_row_length}\n"
-	(0..minimum_row_length-1).each{ |i| rows << Row.new(Row_regex.new, minimum_row_length + i) }
-	(minimum_row_length..num_rows-1).each{ |i| rows << Row.new(Row_regex.new, num_rows + minimum_row_length -1 -i) }
-
-	puts rows
-
-	next_rows = (0..num_rows-1).map { |r| Row.new(Row_regex.new, r, rows) }
-
-	puts "\n"
-	puts next_rows
-end

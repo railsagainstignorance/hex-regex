@@ -1,10 +1,5 @@
 require File.dirname(__FILE__) + '/full_hex.rb'
-
-# define
-# - side
-# - full_row
-# - partial_left
-# - partial_right
+require File.dirname(__FILE__) + '/cell.rb'
 
 def message_and_exit(text)
   puts 'Error: ' + text
@@ -50,3 +45,6 @@ puts "\npopulating hex\n"
 Full_hex.instance.populate_hex
 
 puts Full_hex.instance.to_s
+
+puts "\ncell test: all cells' row ids:\n"
+puts Cell.all.map { |e| e.to_s + '[' + e.row_ids.join(',') + ']' }.join(', ')
