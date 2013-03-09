@@ -32,7 +32,8 @@ TBD
 - score all the rows. DONE
 - identify a suitable cell. DONE
 - try all poss letter values, looks scores in the 3 intersecting rows, for a cell. DONE
-- scan all the cells, looking to improve each one
-- pick a letter
-- iterate
+- scan all the cells, looking to improve each one. DONE
+- iterate. DONE
+- expand the partials in the DSL text. the alg seems to be implemented ok, but not getting very far with the current regexs.DONE
+- expand them some more.
 - fancy GUI? 

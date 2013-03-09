@@ -39,11 +39,12 @@ end
 
 puts Full_hex.instance.summary
 
-puts Full_hex.instance.to_s
+#puts Full_hex.instance.to_s
 
 puts "\npopulating hex\n"
 Full_hex.instance.populate_hex
 
+if false
 puts Full_hex.instance.to_s
 
 puts "\ncell test: all cells' row ids:\n"
@@ -74,6 +75,8 @@ else
 end
 printf "total score = %5.2f\n", Row.total_score
 
+end
+
 puts "\nrepeatedly scan all cells until no more improvement:\n"
 printf "total score = %5.2f\n", Row.total_score
 iteration = 1
@@ -82,3 +85,4 @@ while Cell.find_a_better_letter_across_all_cells?
   iteration += 1
 end
 puts Row.test_all_rows_scores
+printf "total score = %5.2f\n", Row.total_score
