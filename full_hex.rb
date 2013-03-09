@@ -37,4 +37,8 @@ class Full_hex
 - #{sides.first.row_regexs.length} rows per side
 "
   end
+
+  def to_s
+    (0..@sides.length-1).map{|i| "side #{i+1}\n" + @sides[i].to_s}.join("\n")
+  end
 end

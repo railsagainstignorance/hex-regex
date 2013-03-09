@@ -43,3 +43,5 @@ if( ! Full_hex.instance.all_inputs_validated? )
 end
 
 puts Full_hex.instance.summary
+
+puts Full_hex.instance.to_s

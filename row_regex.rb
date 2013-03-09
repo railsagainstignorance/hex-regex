@@ -14,4 +14,7 @@ class Row_regex
     @partials << Regexp.new( pattern + '$' )
   end
 
+  def to_s()
+    '/' + @full.source + "/ : " + @partials.map{|item| ' /' + item.source + '/'}.join(", ")
+  end
 end

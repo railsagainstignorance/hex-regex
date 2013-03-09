@@ -15,4 +15,8 @@ class Side
     @row_regexs.last
   end
 
+  def to_s()
+    (0..@row_regexs.length-1).map{|i| (i+1).to_s + ') ' + @row_regexs[i].to_s}.join("\n")
+  end 
+
 end
