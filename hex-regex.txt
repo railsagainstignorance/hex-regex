@@ -14,7 +14,7 @@
 
 side
 full_row '.*H.*H.*'
-   partial_left 'H'
+   partial_left '.*H'
 full_row '(DI|NS|TH|OM)*'
    partial_left  '(DI|NS|TH|OM){1}'
    partial_left  '(DI|NS|TH|OM){2}'

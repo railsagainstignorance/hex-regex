@@ -56,7 +56,6 @@ puts "\ncell score test: all cells' scores:\n"
 puts Cell.test_all_cells_rows_scores
 
 puts "\nfind a better letter test:\n"
-printf "total score = %5.2f\n", Row.total_score
 puts Cell.test_cell_find_a_better_letter
 printf "total score = %5.2f\n", Row.total_score
 
@@ -82,3 +81,4 @@ while Cell.find_a_better_letter_across_all_cells?
   printf "%d) total score = %5.2f\n", iteration, Row.total_score.to_s
   iteration += 1
 end
+puts Row.test_all_rows_scores
