@@ -74,7 +74,7 @@ class Row
 				 padding.join(''),
 				 @cells.map { |item| item.to_s }.join(' '),
 				 padding.join(''),
-				 @row_regex.to_s 
+				 @row_regex.score_breakdown_to_s(self.string_of_cells)
 				 )
 	end
 
