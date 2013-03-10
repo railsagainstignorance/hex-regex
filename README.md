@@ -24,6 +24,14 @@ Approach
  * retain the letter change if it improves things
  * rinse and repeat
 
+ Also, re TDD, have not explicitly used tests but am experimenting with running test-esque code in the main hex-regex-dsl.rb file automatically. The test-esque code is mainly to view the output to see what is happening. 
+ Seems to have a similar effect on coding.
+ * helping to think about the code
+ * immediately breaks if later code changes cause a problem
+ * helps surface the need for assorted abstractions and pushing the code to the more suited class.
+"But that's just the same as writing test code as you go anyway."
+Maybeso.
+
 TBD
 ===
 
@@ -43,3 +51,4 @@ TBD
 - fancy GUI? 
 - wondering if the partials are in fact *preventing* the algorithm from being able to find the right letters
 - also, perhaps there are certain improvements which can only be made through 2+ letters changing at once
+- have quite possibly reached the limit of dumb, single-letter mutations, but hopefully the hex framework will support any further algorithmic ideas.

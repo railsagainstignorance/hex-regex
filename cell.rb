@@ -67,7 +67,12 @@ class Cell
 
 	def self.find_a_better_letter_across_all_cells?
 		improvements = @@ALL_CELLS.map { |c| c.find_a_better_letter? }.keep_if{|found| found}
+		@@num_improvements = improvements.length
 		! improvements.empty?
+	end
+
+	def self.num_improvements
+		@@num_improvements
 	end
 
 	def initialize( letter = @@ALL_LETTERS[rand(26)] )
@@ -103,14 +108,14 @@ class Cell
 			if (new_letter != initial_letter)
 				@letter   = new_letter
 				new_score = self.score
-				if new_score > best_score
+				if (new_score > best_score) or ((new_score == best_score) and (best_letter == initial_letter))
 					best_score  = new_score
 					best_letter = new_letter
 				end
 			end
 		end
 
-		if best_score > initial_score
+		if best_letter != initial_letter
 			@@ALL_CHANGES << { 
 				:cell            => self,
 				:previous_score  => initial_score,

@@ -45,35 +45,35 @@ puts "\npopulating hex\n"
 Full_hex.instance.populate_hex
 
 if false
-puts Full_hex.instance.to_s
+  puts Full_hex.instance.to_s
 
-puts "\ncell test: all cells' row ids:\n"
-puts Cell.test_all_cells_row_ids
+  puts "\ncell test: all cells' row ids:\n"
+  puts Cell.test_all_cells_row_ids
 
-puts "\nrow score test: all rows' scores:\n"
-puts Row.test_all_rows_scores
+  puts "\nrow score test: all rows' scores:\n"
+  puts Row.test_all_rows_scores
 
-puts "\ncell score test: all cells' scores:\n"
-puts Cell.test_all_cells_rows_scores
+  puts "\ncell score test: all cells' scores:\n"
+  puts Cell.test_all_cells_rows_scores
 
-puts "\nfind a better letter test:\n"
-puts Cell.test_cell_find_a_better_letter
-printf "total score = %5.2f\n", Row.total_score
+  puts "\nfind a better letter test:\n"
+  puts Cell.test_cell_find_a_better_letter
+  printf "total score = %5.2f\n", Row.total_score
 
-puts "\nscan all cells to find better letters:\n"
-printf "total score = %5.2f\n", Row.total_score
-puts Cell.test_scan_all_cells_for_better_letters
-printf "total score = %5.2f\n", Row.total_score
+  puts "\nscan all cells to find better letters:\n"
+  printf "total score = %5.2f\n", Row.total_score
+  puts Cell.test_scan_all_cells_for_better_letters
+  printf "total score = %5.2f\n", Row.total_score
 
-puts "\nscan all cells and report if any improvement:\n"
-printf "total score = %5.2f\n", Row.total_score
-found = Cell.find_a_better_letter_across_all_cells?
-if found
-  puts " improvement found\n"
-else
-  puts " none found\n"
-end
-printf "total score = %5.2f\n", Row.total_score
+  puts "\nscan all cells and report if any improvement:\n"
+  printf "total score = %5.2f\n", Row.total_score
+  found = Cell.find_a_better_letter_across_all_cells?
+  if found
+    puts " improvement found\n"
+  else
+    puts " none found\n"
+  end
+  printf "total score = %5.2f\n", Row.total_score
 
 end
 
@@ -81,8 +81,10 @@ puts "\nrepeatedly scan all cells until no more improvement:\n"
 initial_score = Row.total_score
 printf "total score = %5.2f\n", initial_score
 iteration = 1
-while Cell.find_a_better_letter_across_all_cells?
-  printf "%d) total score = %5.2f\n", iteration, Row.total_score.to_s
+max_iterations = 10
+while Cell.find_a_better_letter_across_all_cells? and iteration < max_iterations
+  printf "%d) total score = %5.2f, num_cell_changes = %d\n", iteration, Row.total_score.to_s, Cell.num_improvements
+  $stdout.flush
   iteration += 1
 end
 

@@ -39,11 +39,14 @@ class Full_hex
   end
 
   def summary
-  "Full_hex: summary
+    total_rows = sides.first.row_regexs.length * 3
+    total_cells = (((minimum_row_length() -1) +1)*(minimum_row_length() -1) / 2) * 6 + 1
+    "Full_hex: summary
 - #{sides.length} sides
 - #{sides.first.row_regexs.length} rows per side
 - minimum_row_length is #{minimum_row_length}
 - #{sides.first.row_regexs.length * 3} total rows
+- #{total_cells} total cells
 "
   end
 
