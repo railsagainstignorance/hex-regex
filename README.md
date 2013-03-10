@@ -52,3 +52,11 @@ TBD
 - wondering if the partials are in fact *preventing* the algorithm from being able to find the right letters
 - also, perhaps there are certain improvements which can only be made through 2+ letters changing at once
 - have quite possibly reached the limit of dumb, single-letter mutations, but hopefully the hex framework will support any further algorithmic ideas.
+- how about allowing flipflop between rows which match, and rows which dont? Every 2nd iteration, ignore the contributions of previously matching rows. Not sure that makes sense. 
+ - After iteration1, some rows don't match. 
+ - setting those to ".*" (temporarily), match against the remaining rows in iteration 2
+ - After iteration2, there are the (previously) matching iteration1 rows, the (currently) matching iteration 2 rows, and the (currently) non-matching iteration2 rows.
+ - what next? 
+ - ignore all matching iterations 1 and 2 rows, and only score against the non-matching iteration rows in iteration 3?
+ - keep going until there are no non-matching rows left, then start again?
+ - can we be sure of getting a fully matched row in each iteration? 
