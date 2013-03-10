@@ -41,3 +41,5 @@ TBD
 - add partials to the new rows. DONE
 - add more partials, based on stats of matches
 - fancy GUI? 
+- wondering if the partials are in fact *preventing* the algorithm from being able to find the right letters
+- also, perhaps there are certain improvements which can only be made through 2+ letters changing at once

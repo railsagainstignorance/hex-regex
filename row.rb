@@ -22,7 +22,7 @@ class Row
 	# NB, nth starts at 0
 
 	def initialize( id_prefix, row_regex, nth, existing_rows )
-		@id        = [id_prefix, nth].join('.')
+		@id        = sprintf("%s.%02d", id_prefix, nth)
 		@row_regex = row_regex
 		@cells     = []
 

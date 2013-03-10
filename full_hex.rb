@@ -7,6 +7,7 @@ class Full_hex
 
   def initialize
     @sides = []
+    @input_woes = ["Full_hex has not had all_inputs_validated? invoked"]
   end
 
   def add_side( side )
