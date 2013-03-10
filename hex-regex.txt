@@ -12,6 +12,9 @@
 # - same number of rows per side
 # - a partial_* having a row to belong to
 
+# based on
+# http://www.coinheist.com/rubik/a_regular_crossword/grid.pdf
+
 side
 full_row '.*H.*H.*'
    partial_left '.*H'
@@ -48,6 +51,12 @@ full_row '[^C]*[^R]*III.*'
    partial_left  '.*I'
    partial_left  '.*II'
    partial_left  '.*III'
+full_row '(...?)\1*'
+full_row '([^X]|XCC)*'
+full_row '(RR|HHH)*.?'
+full_row 'N.*X.X.X.*E'
+full_row 'R*D*M*'
+full_row '.(C|HH)*'
 
 side
 full_row '.*G.*V.*H.*'
@@ -83,6 +92,12 @@ full_row '.*(.)(.)(.)(.)\4\3\2\1.*'
 full_row '.*(IN|SE|HI)'
    partial_right  '[NEI]'
    partial_right  '[ISH].'
+full_row '[^C]*MMM[^C]*'
+full_row '.*(.)C\1X\1.*'
+full_row '[CEIMU]*OH[AEMOR]*'
+full_row '(RX|^R)*'
+full_row '[^M]*M[^M]*'
+full_row '(S|MM|HHH)*'
 
 side
 full_row '.*SE.*UE.*'
@@ -117,4 +132,10 @@ full_row '.*PRR.*DDC.*'
    partial_left  '.*DC'
    partial_left  '.*DDC'
 full_row '.*'
+full_row '[AM]*CM(RC)*R?'
+full_row '([^MC]|MM|CC)*'
+full_row '(E|CR|MN)*'
+full_row 'P+(..)\1.*'
+full_row '[CHMNOR]*I[CHMNOR]*'
+full_row '(ND|ET|IN)[^X]*'
 

@@ -63,13 +63,13 @@ class Row
 		@@ALL_ROWS << self
 	end
 
-	def to_s( max_cells = 7 )
+	def to_s( max_cells = 13 )
 		if @cells.length > max_cells
 			padding = []
 		else
 			padding = [" "] * (max_cells- @cells.length)
 		end
-		sprintf( "%s) %s%s%s : %s",
+		sprintf( "%-4s) %s%s%s : %s",
 		         @id,
 				 padding.join(''),
 				 @cells.map { |item| item.to_s }.join(' '),

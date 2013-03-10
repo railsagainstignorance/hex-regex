@@ -35,5 +35,8 @@ TBD
 - scan all the cells, looking to improve each one. DONE
 - iterate. DONE
 - expand the partials in the DSL text. the alg seems to be implemented ok, but not getting very far with the current regexs.DONE
-- expand them some more.
+- expand them some more. DONE
+- add all the missing rows. had forgotten only some were entered initially. Sigh.
+- carefully check the row regexs
+- 
 - fancy GUI? 
