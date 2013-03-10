@@ -85,8 +85,11 @@ while Cell.find_a_better_letter_across_all_cells?
   printf "%d) total score = %5.2f\n", iteration, Row.total_score.to_s
   iteration += 1
 end
-puts Row.test_all_rows_scores
-printf "total score = %5.2f\n", Row.total_score
 
 puts "\nall changes:\n"
 puts Cell.pp_changes( initial_score )
+
+puts "\nrow scores:\n"
+puts Row.test_all_rows_scores
+printf "total score = %5.2f\n", Row.total_score
+

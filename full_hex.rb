@@ -42,6 +42,7 @@ class Full_hex
 - #{sides.length} sides
 - #{sides.first.row_regexs.length} rows per side
 - minimum_row_length is #{minimum_row_length}
+- #{sides.first.row_regexs.length * 3} total rows
 "
   end
 

@@ -36,7 +36,8 @@ TBD
 - iterate. DONE
 - expand the partials in the DSL text. the alg seems to be implemented ok, but not getting very far with the current regexs.DONE
 - expand them some more. DONE
-- add all the missing rows. had forgotten only some were entered initially. Sigh.
+- add all the missing rows. had forgotten only some were entered initially. Sigh. DONE
 - carefully check the row regexs
-- 
+- add partials to the new rows. DONE
+- add more partials, based on stats of matches
 - fancy GUI? 
