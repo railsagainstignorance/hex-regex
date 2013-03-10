@@ -23,4 +23,11 @@ class Row_regex
   def all_regexs
     [@full].concat(@partials)
   end
+
+  def score(string)
+    cumulative_score = 0
+    cumulative_score += 1 if @full.match(string)       
+    @partials.each{ |regex| cumulative_score += 0.01 if regex.match(string) }
+    return cumulative_score
+  end
 end

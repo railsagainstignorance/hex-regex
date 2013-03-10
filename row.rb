@@ -83,12 +83,7 @@ class Row
 	end
 
 	def score
-		string = self.string_of_cells
-		cumulative_score = 0
-		cumulative_score += 1 if @row_regex.full.match(string)
-		@row_regex.partials.each{ |regex| cumulative_score += 0.01 if regex.match(string) }
-		return cumulative_score
+		@row_regex.score(self.string_of_cells)
 	end
-
 
 end	
