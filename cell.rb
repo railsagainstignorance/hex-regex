@@ -9,7 +9,7 @@ class Cell
 		@ALL_CHANGES
 	end	
 
-	def self.pp_changes( initial_score=nil )
+	def self.changes_pp( initial_score=nil )
 		initial_score = @@ALL_CHANGES.first[:previous_score] if initial_score.nil?
 		cumulative_score = initial_score
 
@@ -22,6 +22,53 @@ class Cell
 				ch[:previous_score],  ch[:next_score],
 				cumulative_score
 				) }.join("\n")
+	end
+
+	def self.all_histories
+		# create a map of cell to history of changes
+		# there should be an initial change for each cell being created
+		# iterate over the list of changes and append each change to the relevant map value
+		# return the map
+		#@@ALL_CHANGES << { 
+		#	:cell            => self,
+		#	:previous_score  => 0,
+		#	:next_score      => 0,
+		#	:previous_letter => nil,
+		#	:next_letter     => letter
+		#	}
+
+		map_of_cell_to_changes = {}
+
+		@@ALL_CHANGES.each do |change|
+			cell = change[:cell]
+			map_of_cell_to_changes[cell] = [] if ! map_of_cell_to_changes.has_key?(cell)
+			map_of_cell_to_changes[cell] << change
+		end
+
+		return map_of_cell_to_changes
+	end
+
+	def self.all_histories_pp
+		# iterate over the list of cells (as keys)
+		# iterate over list of changes, creating a sequence of letter changes, initially
+
+		#@@ALL_CHANGES << { 
+		#	:cell            => self,
+		#	:previous_score  => 0,
+		#	:next_score      => 0,
+		#	:previous_letter => nil,
+		#	:next_letter     => letter
+		#	}
+
+		map_of_cell_to_changes = self.all_histories
+
+		@@ALL_CELLS.map { |cell| 
+			history = map_of_cell_to_changes[cell]
+			sprintf("%s: %s",
+				cell.id,
+				history.map { |h| h[:next_letter] }.join(',')
+				)
+		}.join("\n")
 	end
 
 	def self.all
@@ -79,6 +126,13 @@ class Cell
 		@letter = letter
 		@rows = []
 		@@ALL_CELLS << self
+		@@ALL_CHANGES << { 
+			:cell            => self,
+			:previous_score  => 0,
+			:next_score      => 0,
+			:previous_letter => nil,
+			:next_letter     => letter
+			}
 	end
 
 	def add_to_row( row )
@@ -91,6 +145,10 @@ class Cell
 
 	def row_ids
 		@rows.map { |r| r.id }
+	end
+
+	def id
+		self.row_ids.to_s
 	end
 
 	def score

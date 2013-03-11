@@ -89,9 +89,11 @@ while Cell.find_a_better_letter_across_all_cells? and iteration < max_iterations
 end
 
 puts "\nall changes:\n"
-puts Cell.pp_changes( initial_score )
+puts Cell.changes_pp( initial_score )
 
 puts "\nrow scores:\n"
 puts Row.test_all_rows_scores
 printf "total score = %5.2f\n", Row.total_score
 
+puts "\nall cell histories\n"
+puts Cell.all_histories_pp
