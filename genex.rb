@@ -44,7 +44,7 @@ class FragmentGen
 end
 
 # FragmentRepeaterElement:
-# - .initialize with a list of pieces, and a length, 
+# - .initialize with a fragment_spec (see FragmentParser), and a length, 
 #               to create that length list of FragmentGen objects (via a chain of FREs), each initialized with the list of pieces
 # - .next will iterate over the list of FragmentGens, tail first, rippling back the .next calls, 
 #         returning nil when all the FragmentGens are exhausted
@@ -56,7 +56,7 @@ class FragmentRepeaterElement
 		#puts "DEBUG: FragmentRepeaterElement.new: fragment_spec=#{fragment_spec.to_s}, chain_length=#{chain_length}"
 		@fragment_spec = fragment_spec
 		@chain_length = chain_length
-		@fragmentGen = FragmentGen.new(@fragment_spec)
+		@fragmentGen = FragmentGen.new(@fragment_spec[:fragment_pieces])
 		generate_chain
 	end
 
@@ -162,7 +162,7 @@ class FragmentRepeater
 		# make sure we have an initial chain for the current chain length, i.e. @index
 
 		if @chain.nil?
-			@chain = FragmentRepeaterElement.new(@fragment_spec[:fragment_pieces], @index+1) # remember the param is for chain length, not the index
+			@chain = FragmentRepeaterElement.new(@fragment_spec, @index+1) # remember the param is for chain length, not the index
 		end
 
 		next_fragment = @chain.next
@@ -264,6 +264,11 @@ class FragmentChainer
 end
 
 #-------------------------------------------
+# ToDo
+# - how to handle ([^A]|AAA)   um, tricky.
+# - FragmentChainer: to sticthe together multiple pieces of a regex, as parsed by FragmentParser
+# - how to specify/enforce a precise limit on string length. A new param to pass through?
+
 
 def test
 	fragmentGen = FragmentGen.new
@@ -276,7 +281,13 @@ def test
 	end
 
 	puts "----"
-	fragmentRepeaterElement = FragmentRepeaterElement.new(['RR', 'HHH'], 4)
+	fragmentRepeaterElement = FragmentRepeaterElement.new({
+		:fragment_pieces => ['RR', 'HHH'],
+		:repeat_char     => nil,
+		:re_use          => false,
+		:record          => false,
+		:repeat_from     => 0
+		}, 4)
 	puts "fragmentRepeaterElement:\n" + fragmentRepeaterElement.to_s
 	puts "fragmentRepeaterElement.current: " + fragmentRepeaterElement.current.to_s
 	puts "calling fragmentRepeaterElement.next"
