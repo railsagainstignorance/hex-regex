@@ -108,7 +108,7 @@ end
 # nil means end of sequence
 
 # FragmentRepeater:
-# - .initialize with a list of pieces and a repeat char,
+# - .initialize with a fragment_spec (see FragmentParser for details),
 #               where the list of pieces will be passed to a FragmentRepeaterElement (and FragmentGen),
 #                     and the repeat char is used to work out how the FRE chain will increase in length as we iterate
 #               creating an FRE for the starting length of chain
@@ -119,9 +119,9 @@ class FragmentRepeater
 
 	@@EMPTY_FRAGMENT = ''
 
-	def initialize(fragment_spec, repeat_char=nil)
+	def initialize(fragment_spec)
 		@fragment_spec = fragment_spec
-		@repeat_char = repeat_char
+		repeat_char = @fragment_spec[:repeat_char]
 
 		case repeat_char
 		when nil # for an exact match
@@ -145,7 +145,7 @@ class FragmentRepeater
 	end
 
 	def to_s
-		"FragmentRepeater: @fragment_spec=#{@fragment_spec}, @repeat_char=\'#{@repeat_char.to_s}\'"
+		"FragmentRepeater: @fragment_spec=#{@fragment_spec}"
 	end
 
 	def next
@@ -162,7 +162,7 @@ class FragmentRepeater
 		# make sure we have an initial chain for the current chain length, i.e. @index
 
 		if @chain.nil?
-			@chain = FragmentRepeaterElement.new(@fragment_spec, @index+1) # remember the param is for chain length, not the index
+			@chain = FragmentRepeaterElement.new(@fragment_spec[:fragment_pieces], @index+1) # remember the param is for chain length, not the index
 		end
 
 		next_fragment = @chain.next
@@ -275,18 +275,27 @@ def test
 		puts f
 	end
 
+	puts "----"
 	fragmentRepeaterElement = FragmentRepeaterElement.new(['RR', 'HHH'], 4)
 	puts "fragmentRepeaterElement:\n" + fragmentRepeaterElement.to_s
 	puts "fragmentRepeaterElement.current: " + fragmentRepeaterElement.current.to_s
 	puts "calling fragmentRepeaterElement.next"
 	puts "fragmentRepeaterElement.nexts: " + (1..30).map { |e| fragmentRepeaterElement.next.to_s }.join(',')
 
+	puts "----"
 	['*', '+', '?', nil].each { |repeat_char| 
-		fragmentRepeater = FragmentRepeater.new(['AA', 'BB', 'CC'], repeat_char)
+		fragmentRepeater = FragmentRepeater.new({
+			:fragment_pieces => ['AA', 'BB', 'CC'],
+			:repeat_char     => repeat_char,
+			:re_use          => false,
+			:record          => false,
+			:repeat_from     => 0
+		})
 		puts fragmentRepeater.to_s
-		puts "fragmentRepeater.nexts: " + (1..30).map { |e| (fragmentRepeater.next || 'nil') }.join(',')
+		puts "fragmentRepeater.nexts: " + (1..30).map { |e| "#{e.to_s}." + (fragmentRepeater.next || 'nil') }.join(',')
 	}
 
+	puts "----"
 	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)'
 	puts "FragmentParser.parse_regex: regex_string=#{regex_string}"
 	puts FragmentParser.parse_regex(regex_string).join("\n")
