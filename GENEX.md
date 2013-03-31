@@ -14,6 +14,7 @@ Starting with:
 * (aa|bb|cc) (either aa or bb or cc)
 * [abc]      (either a or b or c)
 * [^abc]     (anything other than a or b or c)
+
 * ^          (anchored to the start of the string)
 * $          (anchored to the end of the string)
 * \1         (previous match of the ())
