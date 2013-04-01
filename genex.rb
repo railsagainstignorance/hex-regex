@@ -198,21 +198,24 @@ class FragmentParser
 		
 		capture = false
 		
+		anyornoneofchar        ='\[\^?[A-Z]+\]'
+		charsoranyornoneofchar ="(?:[A-Z]+|#{anyornoneofchar})"
+		anyrepeat              ='([*+?])'
 		case regex_string
 		when ""
 			return []
-		when /^(\.+|[A-Z]+|\[\^?[A-Z]+\]|\\\d)([*+?])?(.*)$/
+		when /^(\.+|[A-Z]+|#{anyornoneofchar}|\\\d)#{anyrepeat}?(.*)$/
 			# can parse: ... , [ABC] , [^ABC], \1, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
 			remaining_regex_string = $3
-		when /^\((\.+)([*+?])\)(.*)$/
-			# can parse: (...), i.e. storing the match for later use, with optional modifiers [*+?]
+		when /^\((\.+)#{anyrepeat}\)(.*)$/
+			# can parse: (...?), i.e. storing the match for later use, with optional modifiers [*+?] within the braces
 			fragment_string        = $1
 			repeat_char            = $2
 			remaining_regex_string = $3
 			capture                = true
-		when /^\(([A-Z]+(?:\|[A-Z]+))\)([*+?])?(.*)$/
+		when /^\((#{charsoranyornoneofchar}(?:\|#{charsoranyornoneofchar})*)\)#{anyrepeat}?(.*)$/
 			# can parse: (AA|BBB), i.e. storing the match for later use, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
@@ -240,7 +243,7 @@ class FragmentParser
 			dots = $1
 			repeat_from = dots.length - 1
 			fragment_pieces = @@ALL_CHARS
-		when /^([A-Z]+(?:\|[A-Z]+))$/
+		when /^([A-Z]+(?:\|[A-Z]+)*)$/
 			fragment_pieces = $1.split(/\|/)
 		else
 			puts "ERROR: could not parse fragment_string=\'#{fragment_string}\' with repeat_char=\'#{repeat_char}\' in regex_string=\'#{regex_string}\'"
