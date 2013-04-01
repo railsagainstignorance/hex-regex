@@ -72,13 +72,14 @@ genex.rb is a work in progress
 
 ToDo
 - look for a way to stitch a sequence of FRs together
--- will need to specify a mex length of string per sub chain
--- need to use the idea of chain in two ways: FR->FR->FR, and for a given FR, FRE->FRE->FRE
--- too prone to error to have one chaining mechanism
+ - will need to specify a mex length of string per sub chain
+ - need to use the idea of chain in two ways: FR->FR->FR, and for a given FR, FRE->FRE->FRE
+ - too prone to error to have one chaining mechanism
 - will need to pass forward labelled matches
 - will need to parse the regex into its pieces
--- perhaps pass in a list of (spec,repeat_char) pairs
+ - perhaps pass in a list of (spec,repeat_char) pairs
 - FragmentParser: how to handle ([^A]|AAA)   um, tricky.
+ - can currently parse regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)'
 - FragmentChainer: to stitch together multiple pieces of a regex, as parsed by FragmentParser
 - how to specify/enforce a precise limit on string length. A new param to pass through?
 - drive the FREs from the parsed regex fragments

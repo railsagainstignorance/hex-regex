@@ -52,35 +52,35 @@ end
 class FragmentRepeaterElement
 	attr_reader :current
 
-	def initialize(fragment_spec, chain_length)
-		#puts "DEBUG: FragmentRepeaterElement.new: fragment_spec=#{fragment_spec.to_s}, chain_length=#{chain_length}"
+	def initialize(fragment_spec, repeat_length)
+		#puts "DEBUG: FragmentRepeaterElement.new: fragment_spec=#{fragment_spec.to_s}, repeat_length=#{repeat_length}"
 		@fragment_spec = fragment_spec
-		@chain_length = chain_length
+		@repeat_length = repeat_length
 		@fragmentGen = FragmentGen.new(@fragment_spec[:fragment_pieces])
 		generate_chain
 	end
 
 	# private
 	def generate_chain
-		if @chain_length > 1 and ! @fragmentGen.next.nil?
-			#puts "DEBUG: generate_chain: @chain_length=#{@chain_length},  @fragmentGen.current=#{ @fragmentGen.current }"
-			@chain = FragmentRepeaterElement.new( @fragment_spec, @chain_length - 1)
+		if @repeat_length > 1 and ! @fragmentGen.next.nil?
+			#puts "DEBUG: generate_chain: @repeat_length=#{@repeat_length},  @fragmentGen.current=#{ @fragmentGen.current }"
+			@repeat_chain = FragmentRepeaterElement.new( @fragment_spec, @repeat_length - 1)
 		else
-			#puts "DEBUG: generate_chain: @chain = nil"
-			@chain = nil
+			#puts "DEBUG: generate_chain: @repeat_chain = nil"
+			@repeat_chain = nil
 		end
 	end
 
 	# get the next iteration from the chain, and if that is nil, we iterate locally and generate a new chain
 	def next
-		#puts "next: @chain_length=#{@chain_length}, @chain=#{@chain.to_s}, @fragmentGen.current=#{@fragmentGen.current.to_s}"
-		if @chain.nil?
+		#puts "next: @repeat_length=#{@repeat_length}, @repeat_chain=#{@repeat_chain.to_s}, @fragmentGen.current=#{@fragmentGen.current.to_s}"
+		if @repeat_chain.nil?
 			@current = @fragmentGen.next
 		else
-			chained_fragment = @chain.next
+			chained_fragment = @repeat_chain.next
 			if chained_fragment.nil?
 				generate_chain
-				chained_fragment = @chain.next if !@chain.nil?
+				chained_fragment = @repeat_chain.next if !@repeat_chain.nil?
 			end
 			
 			local_fragment = @fragmentGen.current
@@ -92,7 +92,7 @@ class FragmentRepeaterElement
 			end
 		end
 
-		#puts "@chain_length=#{@chain_length}, @current=#{@current}"
+		#puts "@repeat_length=#{@repeat_length}, @current=#{@current}"
 		@current
 	end
 
@@ -101,7 +101,7 @@ class FragmentRepeaterElement
 	end
 
 	def to_s
-		"FragmentRepeaterElement: chain_length=#{@chain_length}, " + @fragmentGen.to_s + "\n" + @chain.to_s
+		"FragmentRepeaterElement: repeat_length=#{@repeat_length}, " + @fragmentGen.to_s + "\n" + @repeat_chain.to_s
 	end
 end
 
@@ -141,7 +141,7 @@ class FragmentRepeater
 		end
 
 		@index = @start_index - 1
-		@chain = nil
+		@repeater_element = nil
 	end
 
 	def to_s
@@ -161,17 +161,17 @@ class FragmentRepeater
 
 		# make sure we have an initial chain for the current chain length, i.e. @index
 
-		if @chain.nil?
-			@chain = FragmentRepeaterElement.new(@fragment_spec, @index+1) # remember the param is for chain length, not the index
+		if @repeater_element.nil?
+			@repeater_element = FragmentRepeaterElement.new(@fragment_spec, repeat_length=@index+1) # remember the param is for chain length, not the index
 		end
 
-		next_fragment = @chain.next
+		next_fragment = @repeater_element.next
 
 		# if the chain has finished, inc index, reset the chain, and try again
 
 		if next_fragment.nil?
 			@index += 1
-			@chain = nil
+			@repeater_element = nil
 			next_fragment = self.next
 		end
 
