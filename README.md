@@ -78,9 +78,9 @@ ToDo
 - will need to pass forward labelled matches
 - will need to parse the regex into its pieces
  - perhaps pass in a list of (spec,repeat_char) pairs
-- FragmentParser: how to handle ([^A]|AAA)   um, tricky.
- - will need FragmentGen/FragmentRepeater/etc to handle ([^ABC]|DDD)
-  - in can FragmentParser convert ([^ABC]|DDD) into [D,E,F,G,H,...Z,DDD]
+- FragmentParser: how to handle ([^A]|AAA)   um, tricky. DONE
+ - will need FragmentGen/FragmentRepeater/etc to handle ([^ABC]|DDD). DONE
+  - in can FragmentParser convert ([^ABC]|DDD) into [D,E,F,G,H,...Z,DDD]. DONE
  - can currently parse regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)'
 - FragmentChainer: to stitch together multiple pieces of a regex, as parsed by FragmentParser
 - how to specify/enforce a precise limit on string length. A new param to pass through?

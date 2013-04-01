@@ -200,6 +200,7 @@ class FragmentParser
 		
 		anyornoneofchar        ='\[\^?[A-Z]+\]'
 		charsoranyornoneofchar ="(?:[A-Z]+|#{anyornoneofchar})"
+		sequenceofcharsoranyornoneofchar = "(#{charsoranyornoneofchar}(?:\\|#{charsoranyornoneofchar})*)"
 		anyrepeat              ='([*+?])'
 		case regex_string
 		when ""
@@ -215,7 +216,7 @@ class FragmentParser
 			repeat_char            = $2
 			remaining_regex_string = $3
 			capture                = true
-		when /^\((#{charsoranyornoneofchar}(?:\|#{charsoranyornoneofchar})*)\)#{anyrepeat}?(.*)$/
+		when /^\(#{sequenceofcharsoranyornoneofchar}\)#{anyrepeat}?(.*)$/
 			# can parse: (AA|BBB), i.e. storing the match for later use, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
@@ -243,8 +244,17 @@ class FragmentParser
 			dots = $1
 			repeat_from = dots.length - 1
 			fragment_pieces = @@ALL_CHARS
-		when /^([A-Z]+(?:\|[A-Z]+)*)$/
-			fragment_pieces = $1.split(/\|/)
+		when /^#{sequenceofcharsoranyornoneofchar}$/
+			fragment_pieces = $1.split(/\|/).map { |piece|
+				case piece
+				when /^([A-Z]+)$/
+					[$1]
+				when /^\[\^([A-Z]+)\]$/
+					@@ALL_CHARS - $1.split(//)
+				when /^\[([A-Z]+)\]$/
+					$1.split(//)
+				end
+			}.flatten
 		else
 			puts "ERROR: could not parse fragment_string=\'#{fragment_string}\' with repeat_char=\'#{repeat_char}\' in regex_string=\'#{regex_string}\'"
 			exit
@@ -306,7 +316,7 @@ def test
 	}
 
 	puts "----"
-	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)(A|BB)+'
+	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)(A|BB)+(AA|BBB|[^ABCZ])?'
 	puts "FragmentParser.parse_regex: regex_string=#{regex_string}"
 	puts FragmentParser.parse_regex(regex_string).join("\n")
 
