@@ -185,10 +185,10 @@ end
 class FragmentParser
 	
 	# input: regex string e.g. "F(.)*[AO]+\1"
-	# output: [ {:fragment_pieces=>['F'], :repeat_char=>nil, :re_use=>false, :record=>true}, 
-	#           {:fragment_pieces=>['A'..'Z'].to_a, :repeat_char=>'*', :re_use=>false, :record=>true},
-	#           {:fragment_pieces=>['A','O'], :repeat_char=>'+', :re_use=>false, :record=>true},
-	#           {:fragment_pieces=>nil, :repeat_char=>nil, :re_use=>1, :record=>true} ]
+	# output: [ {:fragment_pieces=>['F'], :repeat_char=>nil, :backreference=>false, :capture=>true}, 
+	#           {:fragment_pieces=>['A'..'Z'].to_a, :repeat_char=>'*', :backreference=>false, :capture=>true},
+	#           {:fragment_pieces=>['A','O'], :repeat_char=>'+', :backreference=>false, :capture=>true},
+	#           {:fragment_pieces=>nil, :repeat_char=>nil, :backreference=>1, :capture=>true} ]
 	
 	# how to parse?  (AA|BBB)
 	#                (...?) is the same as .? but where start_index = 2. new param: repeat_from
@@ -196,12 +196,12 @@ class FragmentParser
 
 	def self.parse_regex(regex_string)
 		
-		record = false
+		capture = false
 		
 		case regex_string
 		when ""
 			return []
-		when /^(\.+|[A-Z]|\[\^?[A-Z]+\]|\\\d)([*+?])?(.*)$/
+		when /^(\.+|[A-Z]+|\[\^?[A-Z]+\]|\\\d)([*+?])?(.*)$/
 			# can parse: ... , [ABC] , [^ABC], \1, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
@@ -211,24 +211,26 @@ class FragmentParser
 			fragment_string        = $1
 			repeat_char            = $2
 			remaining_regex_string = $3
-			record                 = true
-		when /^\(([A-Z]+(?:\|[A-Z]+))\)(.*)$/
+			capture                = true
+		when /^\(([A-Z]+(?:\|[A-Z]+))\)([*+?])?(.*)$/
 			# can parse: (AA|BBB), i.e. storing the match for later use, with optional modifiers [*+?]
 			fragment_string        = $1
-			repeat_char            = ''
-			remaining_regex_string = $2
-			record                 = true
+			repeat_char            = $2
+			remaining_regex_string = $3
+			capture                = true
 		else
 			puts "ERROR: could not parse regex_string=#{regex_string}"
 			exit
 			return []
 		end
 
-		re_use = false
+		backreference = false
 		repeat_from = 0
 		case fragment_string
+		when /^([A-Z]+)$/
+			fragment_pieces = [$1]
 		when /^\\(\d)$/
-			re_use = $1.to_i
+			backreference = $1.to_i
 			fragment_pieces = nil
 		when /^\[\^([A-Z]+)\]$/
 			fragment_pieces = @@ALL_CHARS - $1.split(//)
@@ -240,13 +242,17 @@ class FragmentParser
 			fragment_pieces = @@ALL_CHARS
 		when /^([A-Z]+(?:\|[A-Z]+))$/
 			fragment_pieces = $1.split(/\|/)
+		else
+			puts "ERROR: could not parse fragment_string=\'#{fragment_string}\' with repeat_char=\'#{repeat_char}\' in regex_string=\'#{regex_string}\'"
+			exit
+			return []
 		end
 
 		fragment_spec = {
 			:fragment_pieces => fragment_pieces, # a list of strings that could match this fragment
 			:repeat_char     => repeat_char,     # the char the indicates how the fragment repeats, possibly nil
-			:re_use          => re_use,          # specifies which previously matched value to use (int) or nil
-			:record          => record,          # is this fragment to be stored for later matching
+			:backreference   => backreference,          # specifies which previously matched value to use (int) or nil
+			:capture         => capture,          # is this fragment to be stored for later matching
 			:repeat_from     => repeat_from      # to cover multiple dots, e.g. ..., would have repeat_from=2
 		}
 
@@ -274,8 +280,8 @@ def test
 	fragmentRepeaterElement = FragmentRepeaterElement.new({
 		:fragment_pieces => ['RR', 'HHH'],
 		:repeat_char     => nil,
-		:re_use          => false,
-		:record          => false,
+		:backreference   => false,
+		:capture         => false,
 		:repeat_from     => 0
 		}, 4)
 	puts "fragmentRepeaterElement:\n" + fragmentRepeaterElement.to_s
@@ -288,8 +294,8 @@ def test
 		fragmentRepeater = FragmentRepeater.new({
 			:fragment_pieces => ['AA', 'BB', 'CC'],
 			:repeat_char     => repeat_char,
-			:re_use          => false,
-			:record          => false,
+			:backreference   => false,
+			:capture         => false,
 			:repeat_from     => 0
 		})
 		puts fragmentRepeater.to_s
@@ -297,7 +303,7 @@ def test
 	}
 
 	puts "----"
-	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)'
+	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)(A|BB)+'
 	puts "FragmentParser.parse_regex: regex_string=#{regex_string}"
 	puts FragmentParser.parse_regex(regex_string).join("\n")
 
