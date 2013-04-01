@@ -145,7 +145,7 @@ class FragmentRepeater
 	end
 
 	def to_s
-		"FragmentRepeater: @fragment_spec=#{@fragment_spec}"
+		"FragmentRepeater: @fragment_spec=#{@fragment_spec}, @start_index=#{@start_index}, @end_index=#{@end_index}, @index=#{@index}"
 	end
 
 	def next
@@ -205,7 +205,7 @@ class FragmentParser
 		case regex_string
 		when ""
 			return []
-		when /^(\.+|[A-Z]+|#{anyornoneofchar}|\\\d)#{anyrepeat}?(.*)$/
+		when /^(\.+|[A-Z]|#{anyornoneofchar}|\\\d)#{anyrepeat}?(.*)$/
 			# can parse: ... , [ABC] , [^ABC], \1, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
@@ -231,7 +231,7 @@ class FragmentParser
 		backreference = false
 		repeat_from = 0
 		case fragment_string
-		when /^([A-Z]+)$/
+		when /^([A-Z])$/
 			fragment_pieces = [$1]
 		when /^\\(\d)$/
 			backreference = $1.to_i
@@ -273,8 +273,107 @@ class FragmentParser
 	end
 end
 
+# FragmentChainElement:
+# - .initialize with a list of fragment_specs
+#   - pluck off first spec for self, invoked FCE.initialize with remaining specs (if any)
+# - .next with a list of backreferences
+#  - generates first string (if needed), append to backreferences if this spec says so
+#  - invokes chain's next to get the remaining values
+#  - if that is nil, iterate self and try again
+#  - concatenate self's value and chain's value and returns that or nil
+
+class FragmentChainElement
+	def initialize( fragment_specs )
+		# assume param is a clone and can be mucked with
+		@fragment_spec 			  = fragment_specs.shift
+		@fragment_specs_for_chain = fragment_specs
+		@fragment_repeater        = FragmentRepeater.new(@fragment_spec)
+		generate_chain
+		@current                  = nil
+		@is_first_next            = true
+	end
+
+	def next(backreferences)
+		if @is_first_next
+			@current       = @fragment_repeater.next
+			backreferences.push(@current) if @fragment_specs[:capture]
+			@is_first_next = false
+		end
+
+		return nil if @current.nil?
+
+		if @chain.nil?
+			chain_next = ''
+		else
+			chain_next = @chain.next(backreferences)
+
+			if chain_next.nil?
+				@current = @fragment_repeater.next
+				if ! @current.nil?
+					if @fragment_specs[:capture]
+						backreferences.pop
+						backreferences.push(@current)
+					end
+					generate_chain
+					chain_next = @chain.next(backreferences)	
+				end
+			end
+		end
+		
+		return nil if chain_next.nil?
+
+		return @current + @chain_next
+	end
+
+	def to_s
+		"FragmentChainElement: @fragment_spec=#{@fragment_spec}, @current=#{@current}, @is_first_next=#{@is_first_next},\n                      @fragment_repeater=#{@fragment_repeater}\n@chain=#{@chain.to_s}"
+	end
+
+	def generate_chain
+		if ! @fragment_specs_for_chain.empty?
+			@chain = FragmentChainElement.new(Array.new(@fragment_specs_for_chain))
+		else
+			@chain = nil
+		end
+	end
+end
+
+# FragmentChainer: 
+# - .initialized with a regex_string
+#  - parses the regex_string, to get a list of fragment_specs
+# - .next
+#  - creates the initial array of backreferences
+#  - invokes teh start of the chain of FragmentChainElements, passing along the backreferences
+#  - returns the concatenated string fragments
+
+# ToDo
+# - consume backreferences (in FragmentGen, so pass list of backrefs through stack)
+# - create  backreferences (in FragmentChainer?)
+# - how to iterate over list of FragmentRepeaters? Perhaps chain chainers?
+# - fix bug where ABC+ matches as (?:ABC)+. DONE
+
 class FragmentChainer
-	#
+	def initialize(regex_string)
+		@regex_string = regex_string
+		@fragment_specs = FragmentParser.parse_regex(@regex_string)
+		#@fragment_repeaters = @fragment_specs.map { |fspec| FragmentRepeater.new(fspec) }
+		@chain = FragmentChainElement.new(Array.new(@fragment_specs))
+		@current = nil
+		@is_first_next = true
+	end
+
+	def to_s
+		"FragmentChainer: regex_string=\'#{@regex_string}\', @is_first_next=#{@is_first_next},\n" + @fragment_specs.join("\n") + ",\n@chain=#{@chain.to_s}"
+	end
+
+	def next
+		return nil if !@is_first_next and @current.nil?
+		@is_first_next = false
+
+		return nil if @chain.nil?
+
+		@current = @chain.next(backreferences=[])
+	end
 end
 
 #
@@ -319,6 +418,12 @@ def test
 	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)(A|BB)+(AA|BBB|[^ABCZ])?'
 	puts "FragmentParser.parse_regex: regex_string=#{regex_string}"
 	puts FragmentParser.parse_regex(regex_string).join("\n")
+
+	puts "----"
+	regex_string='A*BB+'
+	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
+	fragmentChainer = FragmentChainer.new(regex_string)
+	puts fragmentChainer
 
 	puts "test completed"
 end
