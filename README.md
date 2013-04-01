@@ -60,3 +60,25 @@ TBD
  - ignore all matching iterations 1 and 2 rows, and only score against the non-matching iteration rows in iteration 3?
  - keep going until there are no non-matching rows left, then start again?
  - can we be sure of getting a fully matched row in each iteration? 
+
+Plan B
+======
+
+Cheat. Use a regex -> string generator. Alas Ruby does not seem to have the equivalent of Perl's Regex-Genex package.
+
+So will strive to write one.
+
+genex.rb is a work in progress
+
+ToDo
+- look for a way to stitch a sequence of FRs together
+-- will need to specify a mex length of string per sub chain
+-- need to use the idea of chain in two ways: FR->FR->FR, and for a given FR, FRE->FRE->FRE
+-- too prone to error to have one chaining mechanism
+- will need to pass forward labelled matches
+- will need to parse the regex into its pieces
+-- perhaps pass in a list of (spec,repeat_char) pairs
+- FragmentParser: how to handle ([^A]|AAA)   um, tricky.
+- FragmentChainer: to stitch together multiple pieces of a regex, as parsed by FragmentParser
+- how to specify/enforce a precise limit on string length. A new param to pass through?
+- drive the FREs from the parsed regex fragments

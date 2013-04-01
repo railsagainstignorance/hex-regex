@@ -181,14 +181,6 @@ class FragmentRepeater
 	end
 end
 
-# TBD:
-# - look for a way to stitch a sequence of FRs together
-# -- will need to specify a mex length of string per sub chain
-# -- need to use the idea of chain in two ways: FR->FR->FR, and for a given FR, FRE->FRE->FRE
-# -- too prone to error to have one chaining mechanism
-# - will need to pass forward labelled matches
-# - will need to parse the regex into its pieces
-# -- perhaps pass in a list of (spec,repeat_char) pairs
 
 class FragmentParser
 	
@@ -210,15 +202,18 @@ class FragmentParser
 		when ""
 			return []
 		when /^(\.+|[A-Z]|\[\^?[A-Z]+\]|\\\d)([*+?])?(.*)$/
+			# can parse: ... , [ABC] , [^ABC], \1, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
 			remaining_regex_string = $3
 		when /^\((\.+)([*+?])\)(.*)$/
+			# can parse: (...), i.e. storing the match for later use, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = $2
 			remaining_regex_string = $3
 			record                 = true
 		when /^\(([A-Z]+(?:\|[A-Z]+))\)(.*)$/
+			# can parse: (AA|BBB), i.e. storing the match for later use, with optional modifiers [*+?]
 			fragment_string        = $1
 			repeat_char            = ''
 			remaining_regex_string = $2
@@ -248,11 +243,11 @@ class FragmentParser
 		end
 
 		fragment_spec = {
-			:fragment_pieces => fragment_pieces,
-			:repeat_char     => repeat_char,
-			:re_use          => re_use,
-			:record          => record,
-			:repeat_from     => repeat_from
+			:fragment_pieces => fragment_pieces, # a list of strings that could match this fragment
+			:repeat_char     => repeat_char,     # the char the indicates how the fragment repeats, possibly nil
+			:re_use          => re_use,          # specifies which previously matched value to use (int) or nil
+			:record          => record,          # is this fragment to be stored for later matching
+			:repeat_from     => repeat_from      # to cover multiple dots, e.g. ..., would have repeat_from=2
 		}
 
 		return [fragment_spec] + self.parse_regex(remaining_regex_string)
@@ -263,12 +258,7 @@ class FragmentChainer
 	#
 end
 
-#-------------------------------------------
-# ToDo
-# - how to handle ([^A]|AAA)   um, tricky.
-# - FragmentChainer: to sticthe together multiple pieces of a regex, as parsed by FragmentParser
-# - how to specify/enforce a precise limit on string length. A new param to pass through?
-
+#
 
 def test
 	fragmentGen = FragmentGen.new
