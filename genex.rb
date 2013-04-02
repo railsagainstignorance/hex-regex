@@ -194,6 +194,12 @@ class FragmentParser
 	#                (...?) is the same as .? but where start_index = 2. new param: repeat_from
 	#                ([^A]|AAA)   um, tricky.
 
+	@@id = 1
+
+	def self.reset_id
+		@@id = 0
+	end
+
 	def self.parse_regex(regex_string)
 		
 		capture = false
@@ -266,8 +272,12 @@ class FragmentParser
 			:repeat_char     => repeat_char,     # the char the indicates how the fragment repeats, possibly nil
 			:backreference   => backreference,          # specifies which previously matched value to use (int) or nil
 			:capture         => capture,          # is this fragment to be stored for later matching
-			:repeat_from     => repeat_from      # to cover multiple dots, e.g. ..., would have repeat_from=2
+			:repeat_from     => repeat_from,      # to cover multiple dots, e.g. ..., would have repeat_from=2
+			:id              => @@id,
+			:fragment_string => fragment_string
 		}
+
+		@@id += 1
 
 		return [fragment_spec] + self.parse_regex(remaining_regex_string)
 	end
@@ -294,9 +304,11 @@ class FragmentChainElement
 	end
 
 	def next(backreferences)
+		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
 		if @is_first_next
 			@current       = @fragment_repeater.next
-			backreferences.push(@current) if @fragment_specs[:capture]
+			#puts "DEBUG: FragmentChainElement.next: @is_first_next=#{@is_first_next}, @current=#{@current}"
+			backreferences.push(@current) if @fragment_spec[:capture]
 			@is_first_next = false
 		end
 
@@ -304,9 +316,11 @@ class FragmentChainElement
 
 		if @chain.nil?
 			chain_next = ''
+			@current = @fragment_repeater.next
 		else
 			chain_next = @chain.next(backreferences)
 
+			#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
 			if chain_next.nil?
 				@current = @fragment_repeater.next
 				if ! @current.nil?
@@ -322,7 +336,8 @@ class FragmentChainElement
 		
 		return nil if chain_next.nil?
 
-		return @current + @chain_next
+		#puts "DEBUG: FragmentChainElement.next: out :id=#{@fragment_spec[:id]}, @current=#{@current}, chain_next=#{chain_next}"
+		return @current + chain_next
 	end
 
 	def to_s
@@ -349,8 +364,11 @@ end
 # ToDo
 # - consume backreferences (in FragmentGen, so pass list of backrefs through stack)
 # - create  backreferences (in FragmentChainer?)
-# - how to iterate over list of FragmentRepeaters? Perhaps chain chainers?
+# - how to iterate over list of FragmentRepeaters? Perhaps chain chainers? DONE
 # - fix bug where ABC+ matches as (?:ABC)+. DONE
+# - specify/limit overall generated string length
+# - fix bug where next is not iterating over different values. DONE
+# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC"
 
 class FragmentChainer
 	def initialize(regex_string)
@@ -372,13 +390,15 @@ class FragmentChainer
 
 		return nil if @chain.nil?
 
-		@current = @chain.next(backreferences=[])
+		@current = @chain.next( backreferences = [] )
 	end
 end
 
 #
 
 def test
+	STDOUT.sync = true
+
 	fragmentGen = FragmentGen.new
 	puts "fragmentGen.all=#{fragmentGen.to_s}"
 	puts "fragmentGen.next: 1..10: " + (1..24).map { |e| fragmentGen.next }.join(',')
@@ -420,12 +440,23 @@ def test
 	puts FragmentParser.parse_regex(regex_string).join("\n")
 
 	puts "----"
-	regex_string='A*BB+'
+	FragmentParser.reset_id
+	regex_string='ABC+'
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
 	fragmentChainer = FragmentChainer.new(regex_string)
 	puts fragmentChainer
 
-	puts "test completed"
+	puts "fragmentChainer.nexts: "
+	(1..5).each { |e| 
+		fcoutput = fragmentChainer.next
+		fcoutput = 'nil' if fcoutput.nil?
+		puts "#{e.to_s}) " + fcoutput.to_s}
+	
+	puts "
+	==============
+	test completed
+	==============
+	"
 end
 
 test

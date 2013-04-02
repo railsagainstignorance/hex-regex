@@ -86,3 +86,6 @@ ToDo
 - how to specify/enforce a precise limit on string length. A new param to pass through?
 - drive the FREs from the parsed regex fragments
 - implement backreferences
+ - pass backreferences in via next from FragmentChainElement
+ - test next via FragmentChainer
+- specify/limit overall generated string length
