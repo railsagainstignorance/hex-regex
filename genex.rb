@@ -72,15 +72,15 @@ class FragmentRepeaterElement
 	end
 
 	# get the next iteration from the chain, and if that is nil, we iterate locally and generate a new chain
-	def next
+	def next(backreferences = [])
 		#puts "next: @repeat_length=#{@repeat_length}, @repeat_chain=#{@repeat_chain.to_s}, @fragmentGen.current=#{@fragmentGen.current.to_s}"
 		if @repeat_chain.nil?
 			@current = @fragmentGen.next
 		else
-			chained_fragment = @repeat_chain.next
+			chained_fragment = @repeat_chain.next(backreferences)
 			if chained_fragment.nil?
 				generate_chain
-				chained_fragment = @repeat_chain.next if !@repeat_chain.nil?
+				chained_fragment = @repeat_chain.next(backreferences) if !@repeat_chain.nil?
 			end
 			
 			local_fragment = @fragmentGen.current
@@ -148,7 +148,7 @@ class FragmentRepeater
 		"FragmentRepeater: @fragment_spec=#{@fragment_spec}, @start_index=#{@start_index}, @end_index=#{@end_index}, @index=#{@index}"
 	end
 
-	def next
+	def next(backreferences = [])
 		#puts "DEBUG: FragmentRepeater.next: @index=#{@index}"
 		if @index == -1 # ie we are starting with nothing
 			@index += 1
@@ -165,14 +165,14 @@ class FragmentRepeater
 			@repeater_element = FragmentRepeaterElement.new(@fragment_spec, repeat_length=@index+1) # remember the param is for chain length, not the index
 		end
 
-		next_fragment = @repeater_element.next
+		next_fragment = @repeater_element.next(backreferences)
 
 		# if the chain has finished, inc index, reset the chain, and try again
 
 		if next_fragment.nil?
 			@index += 1
 			@repeater_element = nil
-			next_fragment = self.next
+			next_fragment = self.next(backreferences)
 		end
 
 		# if we get here, we either have a next_fragment or it is nil (and therefore this FragmentRepeater is finished)
@@ -366,12 +366,13 @@ end
 
 # ToDo
 # - consume backreferences (in FragmentGen, so pass list of backrefs through stack)
-# - create  backreferences (in FragmentChainer?)
+#  - refactor FragmentRepeaterElement and FragmentGen to pass fragment_spec, and for FragmentGen to return a backreference as a value !!!
+# - create  backreferences (in FragmentChainer?). DONE
 # - how to iterate over list of FragmentRepeaters? Perhaps chain chainers? DONE
 # - fix bug where ABC+ matches as (?:ABC)+. DONE
 # - specify/limit overall generated string length
 # - fix bug where next is not iterating over different values. DONE
-# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC", also barfing on "AB?C", "ABC"DONE, "A"DONE
+# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC",DONE also barfing on "AB?C"DONE, "ABC"DONE, "A"DONE. ALL DONE
 
 class FragmentChainer
 	def initialize(regex_string)
@@ -444,7 +445,7 @@ def test
 
 	puts "----"
 	FragmentParser.reset_id
-	regex_string='AB*C?'
+	regex_string='AABBC*D?E?F?G'
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
 	fragmentChainer = FragmentChainer.new(regex_string)
 	puts fragmentChainer
