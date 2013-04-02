@@ -305,26 +305,29 @@ class FragmentChainElement
 
 	def next(backreferences)
 		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
-		if @is_first_next
-			@current       = @fragment_repeater.next
-			#puts "DEBUG: FragmentChainElement.next: @is_first_next=#{@is_first_next}, @current=#{@current}"
-			backreferences.push(@current) if @fragment_spec[:capture]
-			@is_first_next = false
-		end
 
-		return nil if @current.nil?
+		return nil if @current.nil? and ! @is_first_next
+		@is_first_next = false
 
 		if @chain.nil?
 			chain_next = ''
 			@current = @fragment_repeater.next
+			#puts "DEBUG: FragmentChainElement.next: @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
 		else
+			if @current.nil?
+				@current = @fragment_repeater.next
+				return nil if @current.nil?
+				if @fragment_spec[:capture]
+					backreferences.push(@current)
+				end
+			end
 			chain_next = @chain.next(backreferences)
 
-			#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
+			#puts "DEBUG: FragmentChainElement.next: ! @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
 			if chain_next.nil?
 				@current = @fragment_repeater.next
 				if ! @current.nil?
-					if @fragment_specs[:capture]
+					if @fragment_spec[:capture]
 						backreferences.pop
 						backreferences.push(@current)
 					end
@@ -334,7 +337,7 @@ class FragmentChainElement
 			end
 		end
 		
-		return nil if chain_next.nil?
+		return nil if chain_next.nil? or @current.nil?
 
 		#puts "DEBUG: FragmentChainElement.next: out :id=#{@fragment_spec[:id]}, @current=#{@current}, chain_next=#{chain_next}"
 		return @current + chain_next
@@ -368,7 +371,7 @@ end
 # - fix bug where ABC+ matches as (?:ABC)+. DONE
 # - specify/limit overall generated string length
 # - fix bug where next is not iterating over different values. DONE
-# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC"
+# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC", also barfing on "AB?C", "ABC"DONE, "A"DONE
 
 class FragmentChainer
 	def initialize(regex_string)
@@ -441,16 +444,21 @@ def test
 
 	puts "----"
 	FragmentParser.reset_id
-	regex_string='ABC+'
+	regex_string='AB*C?'
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
 	fragmentChainer = FragmentChainer.new(regex_string)
 	puts fragmentChainer
 
-	puts "fragmentChainer.nexts: "
-	(1..5).each { |e| 
+	puts "fragmentChainer.nexts: for regex_string=\'#{regex_string}\'"
+	(1..10).each { |e| 
 		fcoutput = fragmentChainer.next
-		fcoutput = 'nil' if fcoutput.nil?
-		puts "#{e.to_s}) " + fcoutput.to_s}
+		if fcoutput.nil?
+			fcoutput = 'nil' 
+		else
+			fcoutput = "\'#{fcoutput.to_s}\'"
+		end
+		puts sprintf("%3d) %s", e, fcoutput.to_s)
+	}
 	
 	puts "
 	==============
