@@ -21,25 +21,38 @@
 class FragmentGen
 	attr_reader :current, :all
 
-	def initialize(pieces=@@ALL_CHARS)
-		@all = pieces
-		@index = -1 # index points to prev position
-		@max_index = @all.length - 1
+	def initialize(fragment_spec)
+		@fragment_spec = fragment_spec
+		@all           = @fragment_spec[:fragment_pieces]
+		@index         = -1 # index points to prev position
+		@max_index     = @all.length - 1 if !@all.nil?
 	end
 
-	def next
-		if @index > @max_index
-			@current = @@NO_MORE
-		else
+	# if this FragmentGen is matching a backreference, look it up (if its the first next), else read from the list of pieces
+
+	def next(backreferences)
+		if @fragment_spec[:backreference]
+			if @index < 0
+				b = @fragment_spec[:backreference]
+				@current = backreferences[b - 1] # could be nil
+			else
+				@current = nil
+			end
 			@index += 1
-			@current = @all[@index]
+		else
+			if @index > @max_index
+				@current = @@NO_MORE
+			else
+				@index += 1
+				@current = @all[@index]
+			end
 		end
 
 		return @current
 	end
 
 	def to_s
-		'FragmentGen: ' + self.all.to_s + ", current=#{self.current or 'nil'}"
+		"FragmentGen: @fragment_spec=#{@fragment_spec}, current=#{self.current or 'nil'}"
 	end
 end
 
@@ -56,13 +69,13 @@ class FragmentRepeaterElement
 		#puts "DEBUG: FragmentRepeaterElement.new: fragment_spec=#{fragment_spec.to_s}, repeat_length=#{repeat_length}"
 		@fragment_spec = fragment_spec
 		@repeat_length = repeat_length
-		@fragmentGen = FragmentGen.new(@fragment_spec[:fragment_pieces])
-		generate_chain
+		@fragmentGen   = FragmentGen.new(@fragment_spec)
+		@is_first_next = true
 	end
 
 	# private
-	def generate_chain
-		if @repeat_length > 1 and ! @fragmentGen.next.nil?
+	def generate_chain(backreferences = [])
+		if @repeat_length > 1 and ! @fragmentGen.next(backreferences).nil?
 			#puts "DEBUG: generate_chain: @repeat_length=#{@repeat_length},  @fragmentGen.current=#{ @fragmentGen.current }"
 			@repeat_chain = FragmentRepeaterElement.new( @fragment_spec, @repeat_length - 1)
 		else
@@ -72,14 +85,20 @@ class FragmentRepeaterElement
 	end
 
 	# get the next iteration from the chain, and if that is nil, we iterate locally and generate a new chain
-	def next(backreferences = [])
+	def next(backreferences)
 		#puts "next: @repeat_length=#{@repeat_length}, @repeat_chain=#{@repeat_chain.to_s}, @fragmentGen.current=#{@fragmentGen.current.to_s}"
+
+		if @is_first_next
+			generate_chain(backreferences)
+			@is_first_next = false
+		end
+
 		if @repeat_chain.nil?
-			@current = @fragmentGen.next
+			@current = @fragmentGen.next(backreferences)
 		else
 			chained_fragment = @repeat_chain.next(backreferences)
 			if chained_fragment.nil?
-				generate_chain
+				generate_chain(backreferences)
 				chained_fragment = @repeat_chain.next(backreferences) if !@repeat_chain.nil?
 			end
 			
@@ -148,7 +167,7 @@ class FragmentRepeater
 		"FragmentRepeater: @fragment_spec=#{@fragment_spec}, @start_index=#{@start_index}, @end_index=#{@end_index}, @index=#{@index}"
 	end
 
-	def next(backreferences = [])
+	def next(backreferences)
 		#puts "DEBUG: FragmentRepeater.next: @index=#{@index}"
 		if @index == -1 # ie we are starting with nothing
 			@index += 1
@@ -311,11 +330,11 @@ class FragmentChainElement
 
 		if @chain.nil?
 			chain_next = ''
-			@current = @fragment_repeater.next
+			@current = @fragment_repeater.next(backreferences)
 			#puts "DEBUG: FragmentChainElement.next: @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
 		else
 			if @current.nil?
-				@current = @fragment_repeater.next
+				@current = @fragment_repeater.next(backreferences)
 				return nil if @current.nil?
 				if @fragment_spec[:capture]
 					backreferences.push(@current)
@@ -325,7 +344,7 @@ class FragmentChainElement
 
 			#puts "DEBUG: FragmentChainElement.next: ! @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
 			if chain_next.nil?
-				@current = @fragment_repeater.next
+				@current = @fragment_repeater.next(backreferences)
 				if ! @current.nil?
 					if @fragment_spec[:capture]
 						backreferences.pop
@@ -364,16 +383,6 @@ end
 #  - invokes teh start of the chain of FragmentChainElements, passing along the backreferences
 #  - returns the concatenated string fragments
 
-# ToDo
-# - consume backreferences (in FragmentGen, so pass list of backrefs through stack)
-#  - refactor FragmentRepeaterElement and FragmentGen to pass fragment_spec, and for FragmentGen to return a backreference as a value !!!
-# - create  backreferences (in FragmentChainer?). DONE
-# - how to iterate over list of FragmentRepeaters? Perhaps chain chainers? DONE
-# - fix bug where ABC+ matches as (?:ABC)+. DONE
-# - specify/limit overall generated string length
-# - fix bug where next is not iterating over different values. DONE
-# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC",DONE also barfing on "AB?C"DONE, "ABC"DONE, "A"DONE. ALL DONE
-
 class FragmentChainer
 	def initialize(regex_string)
 		@regex_string = regex_string
@@ -399,33 +408,86 @@ class FragmentChainer
 end
 
 #
+# ToDo
+# - consume backreferences (in FragmentGen, so pass list of backrefs through stack)
+#  - refactor FragmentRepeaterElement and FragmentGen to pass fragment_spec, and for FragmentGen to return a backreference as a value !!!. DONE
+#  - fix bug where regex_string='(AA)B(B)C*D?E?F?G\1' only generates nil after first next
+# - create  backreferences (in FragmentChainer?). DONE
+# - how to iterate over list of FragmentRepeaters? Perhaps chain chainers? DONE
+# - fix bug where ABC+ matches as (?:ABC)+. DONE
+# - specify/limit overall generated string length
+# - fix bug where next is not iterating over different values. DONE
+# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC",DONE also barfing on "AB?C"DONE, "ABC"DONE, "A"DONE. ALL DONE
 
 def test
 	STDOUT.sync = true
 
-	fragmentGen = FragmentGen.new
+	fragmentGen = FragmentGen.new({
+		:fragment_pieces => @@ALL_CHARS,
+		:repeat_char     => nil,
+		:backreference   => false,
+		:capture         => false,
+		:repeat_from     => 0
+		})
 	puts "fragmentGen.all=#{fragmentGen.to_s}"
-	puts "fragmentGen.next: 1..10: " + (1..24).map { |e| fragmentGen.next }.join(',')
+	puts "fragmentGen.next: 1..10: " + (1..24).map { |e| fragmentGen.next([]) }.join(',')
 	puts "fragmentGen.current: #{fragmentGen.current}"
 	puts "fragmentGen.next: "
-	while ! (f = fragmentGen.next).nil?
+	while ! (f = fragmentGen.next([])).nil?
 		puts f
 	end
 
+	fragment_spec = {
+		:fragment_pieces => nil,
+		:repeat_char     => nil,
+		:backreference   => 2,
+		:capture         => false,
+		:repeat_from     => 0
+		}
+	fragmentGen = FragmentGen.new( fragment_spec)
+
+	backreferences = ['ABC', 'DEF', 'GHI']
+
+	puts "\n#{fragmentGen.to_s}"
+	puts "fragmentGen.nexts:"
+	(1..3).each { |e| puts "#{e}) #{fragmentGen.next(backreferences) || 'nil'}"}
+	puts "fragmentGen.current: #{fragmentGen.current || 'nil'}"
+
 	puts "----"
-	fragmentRepeaterElement = FragmentRepeaterElement.new({
+	fragment_spec = {
 		:fragment_pieces => ['RR', 'HHH'],
 		:repeat_char     => nil,
 		:backreference   => false,
 		:capture         => false,
 		:repeat_from     => 0
-		}, 4)
+		}
+	fragmentRepeaterElement = FragmentRepeaterElement.new(fragment_spec, 4)
 	puts "fragmentRepeaterElement:\n" + fragmentRepeaterElement.to_s
 	puts "fragmentRepeaterElement.current: " + fragmentRepeaterElement.current.to_s
 	puts "calling fragmentRepeaterElement.next"
-	puts "fragmentRepeaterElement.nexts: " + (1..30).map { |e| fragmentRepeaterElement.next.to_s }.join(',')
+	puts "fragmentRepeaterElement.nexts: " + (1..30).map { |e| fragmentRepeaterElement.next([]).to_s }.join(',')
 
 	puts "----"
+	fragment_spec = {
+		:fragment_pieces => nil,
+		:repeat_char     => nil,
+		:backreference   => 3,
+		:capture         => false,
+		:repeat_from     => 0
+		}
+
+	backreferences = ['ABC', 'DEF', 'GHI']
+
+	fragmentRepeaterElement = FragmentRepeaterElement.new( fragment_spec, 3 )
+	puts "fragmentRepeaterElement:\n" + fragmentRepeaterElement.to_s
+	puts "backreferences=#{backreferences}"
+	puts "fragmentRepeaterElement.current: " + fragmentRepeaterElement.current.to_s
+	puts "calling fragmentRepeaterElement.nexts"
+	puts "fragmentRepeaterElement.nexts: \n"
+	(1..3).map { |e| puts "#{e}) #{fragmentRepeaterElement.next(backreferences) || 'nil' }" }
+
+
+	puts "\n---"
 	['*', '+', '?', nil].each { |repeat_char| 
 		fragmentRepeater = FragmentRepeater.new({
 			:fragment_pieces => ['AA', 'BB', 'CC'],
@@ -435,7 +497,28 @@ def test
 			:repeat_from     => 0
 		})
 		puts fragmentRepeater.to_s
-		puts "fragmentRepeater.nexts: " + (1..30).map { |e| "#{e.to_s}." + (fragmentRepeater.next || 'nil') }.join(',')
+		puts "fragmentRepeater.nexts: " + (1..30).map { |e| "#{e.to_s}." + (fragmentRepeater.next([]) || 'nil') }.join(',')
+	}
+
+	puts "\n----"
+
+	backreferences = ['ABC', 'DEF', 'GHI']
+
+	puts "backreferences=#{backreferences}"
+
+	['*', '+', '?', nil].each { |repeat_char| 
+		fragment_spec = {
+			:fragment_pieces => nil,
+			:repeat_char     => repeat_char,
+			:backreference   => 3,
+			:capture         => false,
+			:repeat_from     => 0
+		}	
+
+		fragmentRepeater = FragmentRepeater.new(fragment_spec)
+		puts fragmentRepeater.to_s
+		puts "fragmentRepeater.nexts: "
+		(1..10).map { |e| puts "#{e.to_s})  #{fragmentRepeater.next(backreferences) || 'nil'}" }
 	}
 
 	puts "----"
@@ -445,7 +528,7 @@ def test
 
 	puts "----"
 	FragmentParser.reset_id
-	regex_string='AABBC*D?E?F?G'
+	regex_string='(AA)B(B)C*D?E?F?G\1'
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
 	fragmentChainer = FragmentChainer.new(regex_string)
 	puts fragmentChainer
@@ -460,6 +543,8 @@ def test
 		end
 		puts sprintf("%3d) %s", e, fcoutput.to_s)
 	}
+	
+	
 	
 	puts "
 	==============
