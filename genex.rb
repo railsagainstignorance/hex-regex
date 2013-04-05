@@ -336,10 +336,12 @@ class FragmentChainElement
 			if @current.nil?
 				@current = @fragment_repeater.next(backreferences)
 				return nil if @current.nil?
-				if @fragment_spec[:capture]
-					backreferences.push(@current)
-				end
 			end
+			
+			if @fragment_spec[:capture]
+				backreferences.push(@current)
+			end
+			
 			chain_next = @chain.next(backreferences)
 
 			#puts "DEBUG: FragmentChainElement.next: ! @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
@@ -528,7 +530,7 @@ def test
 
 	puts "----"
 	FragmentParser.reset_id
-	regex_string='(AA)B(B)C*D?E?F?G\1'
+	regex_string='(AA)B(B)C*D?E?F?G\1\2'
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
 	fragmentChainer = FragmentChainer.new(regex_string)
 	puts fragmentChainer
