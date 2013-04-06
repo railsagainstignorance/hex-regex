@@ -156,7 +156,7 @@ class FragmentRepeater
 			@start_index = 1
 			@end_index   = -1 # keep going 4e4
 		else 
-			exit 'unrecognized repeat_char:' + repeat_char
+			abort 'unrecognized repeat_char:' + repeat_char
 		end
 
 		@index = @start_index - 1
@@ -248,9 +248,7 @@ class FragmentParser
 			remaining_regex_string = $3
 			capture                = true
 		else
-			puts "ERROR: could not parse regex_string=#{regex_string}"
-			exit
-			return []
+			abort "ERROR: could not parse regex_string=#{regex_string}"
 		end
 
 		backreference = false
@@ -281,9 +279,11 @@ class FragmentParser
 				end
 			}.flatten
 		else
-			puts "ERROR: could not parse fragment_string=\'#{fragment_string}\' with repeat_char=\'#{repeat_char}\' in regex_string=\'#{regex_string}\'"
-			exit
-			return []
+			abort "ERROR: could not parse fragment_string=\'#{fragment_string}\' with repeat_char=\'#{repeat_char}\' in regex_string=\'#{regex_string}\'"
+		end
+
+		if ! fragment_pieces.nil?
+			fragment_pieces.sort! {|x,y| x.length <=> y.length }
 		end
 
 		fragment_spec = {
@@ -312,34 +312,39 @@ end
 #  - concatenate self's value and chain's value and returns that or nil
 
 class FragmentChainElement
+	@@fce_count = 0
+	@@FCE_COUNT_MAX = 1000
+
 	def initialize( fragment_specs )
 		# assume param is a clone and can be mucked with
 		@fragment_spec 			  = fragment_specs.shift
 		@fragment_specs_for_chain = fragment_specs
 		@fragment_repeater        = FragmentRepeater.new(@fragment_spec)
 		@current                  = nil
-		@is_first_next            = true
+		@count_next               = 0
 		@fce_chain                = nil
 		@should_have_no_chain     = @fragment_specs_for_chain.empty?
 	end
 
 	def next(backreferences, remaining_length)
-		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}"
+		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}"
+		@@fce_count += 1
+		return nil if @@fce_count > @@FCE_COUNT_MAX
 
-		if @is_first_next
-			@is_first_next = false
-		elsif @current.nil?
+		if @count_next > 0 and @current.nil?
 			return nil
 		end
 		
+		@count_next += 1
+
 		if @should_have_no_chain
 			@current = @fragment_repeater.next(backreferences)
-			# TDOD: yes, but what about if the current.length > remainin_length and keeps getting longer (e.g. with repeat element)?
+			# TODO: yes, but what about if the current.length > remainin_length and keeps getting longer (e.g. with repeat element)?
 			while ! @current.nil? and remaining_length >= 0 and @current.length != remaining_length
 				@current = @fragment_repeater.next(backreferences) 					
 			end
 
-			#puts "DEBUG: FragmentChainElement.next: @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
+			#puts "DEBUG: FragmentChainElement.next: @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, @count_next=#{@count_next}"
 			return @current
 		end
 
@@ -347,12 +352,22 @@ class FragmentChainElement
 			@current = @fragment_repeater.next(backreferences)				
 		end
 	
+		stop_runaway = 0
 		# check we have a @current which fits within the remaining_length
-		while ! @current.nil? and remaining_length >= 0
-			if (remaining_length - @current.length) < 0
-				@current = @fragment_repeater.next(backreferences) 					
-			end
+		if ! @current.nil? and remaining_length >= 0 and @current.length > remaining_length
+			# assume any further nexts will only get longer...
+			@current = nil
 		end
+
+		#while stop_runaway<@@FCE_COUNT_MAX and ! @current.nil? and remaining_length >= 0 and (@current.length > remaining_length)
+		#	puts "DEBUG: FragmentChainElement.next: while: @current=#{@current}, remaining_length=#{remaining_length}, stop_runaway=#{stop_runaway}"
+		#	@current = @fragment_repeater.next(backreferences)
+		#	stop_runaway += 1
+		#end
+
+		#if stop_runaway>=@@FCE_COUNT_MAX
+		#	abort "ERROR: FragmentChainElement.next: while: stop_runaway>#{@@FCE_COUNT_MAX}"
+		#end
 
 		# have we come up with a non-nil @current ?
 		return nil if @current.nil?
@@ -362,22 +377,41 @@ class FragmentChainElement
 		end
 
 		generate_chain if @fce_chain.nil?
+		#puts "DEBUG: FragmentChainElement.next: 1st chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @current.length=#{@current.length}, @count_next=#{@count_next}"
 		chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)
 
-		#puts "DEBUG: FragmentChainElement.next: ! @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
-		
-		while chain_next.nil? and ! @current.nil? and (remaining_length < 0 or (remaining_length - @current.length) >= 0)
-			
+		#puts "DEBUG: FragmentChainElement.next: after chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, chain_next=#{chain_next}"
+		stop_runaway = 0
+		while stop_runaway<@@FCE_COUNT_MAX and chain_next.nil? and ! @current.nil? and (remaining_length < 0 or (remaining_length - @current.length) >= 0)
+			stop_runaway += 1
 			@current = @fragment_repeater.next(backreferences)
+			if !@current.nil? and remaining_length >= 0 and @current.length > remaining_length
+				# assume any further nexts will only get longer...
+				@current = nil
+			end
+			## check we have a @current which fits within the remaining_length
+			#puts "DEBUG: FragmentChainElement.next: in while: stop_runaway=#{stop_runaway}, @@FCE_COUNT_MAX=#{@@FCE_COUNT_MAX}, @current=#{@current}, remaining_length=#{remaining_length}, @current.length=#{@current.nil? or @current.length}"
+			#while (stop_runaway < @@FCE_COUNT_MAX) and (! @current.nil?) and (remaining_length >= 0) and (@current.length > remaining_length)
+			#	puts "DEBUG: FragmentChainElement.next: while in while: @current=#{@current}, remaining_length=#{remaining_length}, stop_runaway=#{stop_runaway}"
+			#	@current = @fragment_repeater.next(backreferences)
+			#	stop_runaway += 1
+			#end
+			#
 			if ! @current.nil?
 				if @fragment_spec[:capture]
 					backreferences.pop
 					backreferences.push(@current)
 				end
 				generate_chain
+				#puts "DEBUG: FragmentChainElement.next: loop chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @current.length=#{@current.length}, @count_next=#{@count_next}"
 				chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)	
 			end
 		end
+
+		if stop_runaway>=@@FCE_COUNT_MAX
+			abort "\nERROR: FragmentChainElement.next: while while: stop_runaway>#{@@FCE_COUNT_MAX}"
+		end
+
 				
 		return nil if chain_next.nil? or @current.nil?
 
@@ -386,7 +420,7 @@ class FragmentChainElement
 	end
 
 	def to_s
-		"FragmentChainElement: @fragment_spec=#{@fragment_spec}, @current=#{@current}, @is_first_next=#{@is_first_next},\n                      @fragment_repeater=#{@fragment_repeater}\n@fce_chain=#{@fce_chain.to_s}"
+		"FragmentChainElement: @fragment_spec=#{@fragment_spec}, @current=#{@current}, @count_next=#{@count_next},\n                      @fragment_repeater=#{@fragment_repeater}\n@fce_chain=#{@fce_chain.to_s}"
 	end
 
 	def generate_chain
@@ -412,17 +446,17 @@ class FragmentChainer
 		@fragment_specs = FragmentParser.parse_regex(@regex_string)
 		@fce_chain          = FragmentChainElement.new(Array.new(@fragment_specs))
 		@current        = nil
-		@is_first_next  = true
+		@count_next     = 0
 		@target_length  = target_length
 	end
 
 	def to_s
-		"FragmentChainer: regex_string=\'#{@regex_string}\', @is_first_next=#{@is_first_next},\n" + @fragment_specs.join("\n") + ",\n@fce_chain=#{@fce_chain.to_s}"
+		"FragmentChainer: regex_string=\'#{@regex_string}\', @count_next=#{@count_next},\n" + @fragment_specs.join("\n") + ",\n@fce_chain=#{@fce_chain.to_s}"
 	end
 
 	def next
-		return nil if !@is_first_next and @current.nil?
-		@is_first_next = false
+		return nil if @count_next > 0 and @current.nil?
+		@count_next += 1
 
 		return nil if @fce_chain.nil?
 
@@ -549,19 +583,21 @@ def test
 	}
 
 	puts "----"
-	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)(A|BB)+(AA|BBB|[^ABCZ])?'
+	regex_string='ABC*[^ABC]+\1\2?[ABC]*[^ABC]+.*..+...?(..?)\1(AA|BBB)(A|BB)+(AA|BBB|[^ABCZ])?(PP|Q|RRR)'
 	puts "FragmentParser.parse_regex: regex_string=#{regex_string}"
 	puts FragmentParser.parse_regex(regex_string).join("\n")
 
 	puts "----"
 	FragmentParser.reset_id
 	regex_string='(AA)B(B)C*D?E?F?G\1\2'
+	regex_string='(ZZZZ|AA|BB)C?D*E+\1'
+	target_length = 9
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
-	fragmentChainer = FragmentChainer.new(regex_string)
+	fragmentChainer = FragmentChainer.new(regex_string,target_length)
 	puts fragmentChainer
 
-	puts "fragmentChainer.nexts: for regex_string=\'#{regex_string}\'"
-	(1..10).each { |e| 
+	puts "fragmentChainer.nexts: for regex_string=\'#{regex_string}\', target_length=#{target_length}"
+	(1..30).each { |e| 
 		fcoutput = fragmentChainer.next
 		if fcoutput.nil?
 			fcoutput = 'nil' 
