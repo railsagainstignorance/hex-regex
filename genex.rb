@@ -312,8 +312,7 @@ end
 #  - concatenate self's value and chain's value and returns that or nil
 
 class FragmentChainElement
-	@@fce_count = 0
-	@@FCE_COUNT_MAX = 1000
+	@@FCE_COUNT_MAX = 10000000
 
 	def initialize( fragment_specs )
 		# assume param is a clone and can be mucked with
@@ -327,9 +326,8 @@ class FragmentChainElement
 	end
 
 	def next(backreferences, remaining_length)
-		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}"
-		@@fce_count += 1
-		return nil if @@fce_count > @@FCE_COUNT_MAX
+		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}, @should_have_no_chain=#{@should_have_no_chain}"
+		return nil if @count_next > @@FCE_COUNT_MAX
 
 		if @count_next > 0 and @current.nil?
 			return nil
@@ -339,12 +337,16 @@ class FragmentChainElement
 
 		if @should_have_no_chain
 			@current = @fragment_repeater.next(backreferences)
-			# TODO: yes, but what about if the current.length > remainin_length and keeps getting longer (e.g. with repeat element)?
-			while ! @current.nil? and remaining_length >= 0 and @current.length != remaining_length
+			# TODO: yes, but what about if the current.length > remaining_length and keeps getting longer (e.g. with repeat element)?
+			while ! @current.nil? and remaining_length >= 0 and @current.length < remaining_length
 				@current = @fragment_repeater.next(backreferences) 					
 			end
 
-			#puts "DEBUG: FragmentChainElement.next: @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, @count_next=#{@count_next}"
+			if ! @current.nil? and @current.length > remaining_length
+				@current = nil
+			end
+
+			#puts "DEBUG: FragmentChainElement.next: @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, @count_next=#{@count_next}, remaining_length=#{remaining_length}"
 			return @current
 		end
 
@@ -377,20 +379,22 @@ class FragmentChainElement
 		end
 
 		generate_chain if @fce_chain.nil?
-		#puts "DEBUG: FragmentChainElement.next: 1st chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @current.length=#{@current.length}, @count_next=#{@count_next}"
+		#puts "DEBUG: FragmentChainElement.next: 1st chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @current.length=#{@current.length}, @count_next=#{@count_next}, @should_have_no_chain=#{@should_have_no_chain}"
 		chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)
 
 		#puts "DEBUG: FragmentChainElement.next: after chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, chain_next=#{chain_next}"
 		stop_runaway = 0
 		while stop_runaway<@@FCE_COUNT_MAX and chain_next.nil? and ! @current.nil? and (remaining_length < 0 or (remaining_length - @current.length) >= 0)
 			stop_runaway += 1
+			prev_current = @current
 			@current = @fragment_repeater.next(backreferences)
 			if !@current.nil? and remaining_length >= 0 and @current.length > remaining_length
 				# assume any further nexts will only get longer...
 				@current = nil
 			end
-			## check we have a @current which fits within the remaining_length
 			#puts "DEBUG: FragmentChainElement.next: in while: stop_runaway=#{stop_runaway}, @@FCE_COUNT_MAX=#{@@FCE_COUNT_MAX}, @current=#{@current}, remaining_length=#{remaining_length}, @current.length=#{@current.nil? or @current.length}"
+			
+			## check we have a @current which fits within the remaining_length
 			#while (stop_runaway < @@FCE_COUNT_MAX) and (! @current.nil?) and (remaining_length >= 0) and (@current.length > remaining_length)
 			#	puts "DEBUG: FragmentChainElement.next: while in while: @current=#{@current}, remaining_length=#{remaining_length}, stop_runaway=#{stop_runaway}"
 			#	@current = @fragment_repeater.next(backreferences)
@@ -405,6 +409,10 @@ class FragmentChainElement
 				generate_chain
 				#puts "DEBUG: FragmentChainElement.next: loop chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @current.length=#{@current.length}, @count_next=#{@count_next}"
 				chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)	
+
+				if (prev_current.length == @current.length) and chain_next.nil?
+					@current = nil
+				end
 			end
 		end
 
@@ -415,6 +423,7 @@ class FragmentChainElement
 				
 		return nil if chain_next.nil? or @current.nil?
 
+		
 		#puts "DEBUG: FragmentChainElement.next: out :id=#{@fragment_spec[:id]}, @current=#{@current}, chain_next=#{chain_next}"
 		return @current + chain_next
 	end
@@ -462,27 +471,26 @@ class FragmentChainer
 
 		@current = @fce_chain.next( backreferences = [], remaining_length = @target_length )
 	end
+
+	def count(max_count=10000000)
+		c = 0
+		while !self.next.nil? and c < max_count
+			c += 1
+			final_current = @current
+			#puts "FragmentChainer.count: count=#{c}, @current=#{@current}"
+		end
+		puts "FragmentChainer.count: count=#{c}, final_current=#{final_current}"
+		return c
+	end
 end
 
 #
 # ToDo
-# - specify/limit overall generated string length
-#  - IDEA: pass in remaining_length, where <0 => unlimited, 0 => must produce no more chars (but still match regex), >1 => must produce this num of chars
-#   - Q: needs to allow for repeat_char=? or * in subsequent FCEs, but, how do we stop a * from iterating 4e4? 
-#     - pre-sort :fragment_pieces?
-#     - Q: but even with A*, how do say no more? 
-#     - Q: Can we say a chain_next is only going to stay same length or get longer?
-#   - Q: will the final FragmentChainElement make the judgement call on whether the overall string is a match on length?
-#   - Q: will it be possible to keep the length checking at the FragmentChainElement level? Hopefully yes.
-#   - Q: will there be a need to have a filter at the FragmentChainer level to check on string length? Hopefully not.
-#  - IDEA: define a adhere_to_precise_length var in start of FCE.next call, to make it clean/clear if we need to worry about length in rest of def
-#   - probably needs several length checks in next def
-#  - specify target length in FCE.inititialize. It doesn't sense for it to change from .next to .next. Then pass remaining_length through stack.
-# - check backreferences pop/push stack for later chain pushes not being popped when unwinding back to earlier in the chain.
+# - debug results of the regex counts, e.g. regex='[CR]*', 8. Loses the plot after 256. DONE
+# - debug regex='N.*X.X.X.*E', 9
+# - debug regex='[CEIMU]*OH[AEMOR]*', 10
 
-def test
-	STDOUT.sync = true
-
+def test1
 	fragmentGen = FragmentGen.new({
 		:fragment_pieces => @@ALL_CHARS,
 		:repeat_char     => nil,
@@ -591,13 +599,14 @@ def test
 	FragmentParser.reset_id
 	regex_string='(AA)B(B)C*D?E?F?G\1\2'
 	regex_string='(ZZZZ|AA|BB)C?D*E+\1'
-	target_length = 9
+	regex_string='[CR]*'
+	target_length = 8
 	puts "FragmentChainer.initialize: regex_string=#{regex_string}"
 	fragmentChainer = FragmentChainer.new(regex_string,target_length)
 	puts fragmentChainer
 
 	puts "fragmentChainer.nexts: for regex_string=\'#{regex_string}\', target_length=#{target_length}"
-	(1..30).each { |e| 
+	(1..260).each { |e| 
 		fcoutput = fragmentChainer.next
 		if fcoutput.nil?
 			fcoutput = 'nil' 
@@ -607,13 +616,44 @@ def test
 		puts sprintf("%3d) %s", e, fcoutput.to_s)
 	}
 	
-	
-	
+	fragmentChainer = FragmentChainer.new(regex_string,target_length)
+	puts "\nfragmentChainer.count=#{fragmentChainer.count}"
+end
+
+def test2
+	puts "\n----"
+	[
+		['.(C|HH)*', 7],
+		['[CR]*', 8],
+		['R*D*M*', 8],
+		['NA*E', 9],
+		#['N.*X.X.X.*E', 9],
+		#['[CEIMU]*OH[AEMOR]*', 10],
+		['(S|MM|HHH)*', 7]
+	].each {|pair| 
+		regex_string = pair[0]
+		target_length = pair[1]
+		fragment_chainer = FragmentChainer.new(regex_string, target_length)
+		puts "regex_string=#{regex_string}, target_length=#{target_length}"
+		#fragment_chainer=#{fragment_chainer}"
+		count = fragment_chainer.count
+		puts "    count=#{count}" 
+	}
+end
+
+def test
+	STDOUT.sync = true
+
+	puts "test started:\n"
+
+#	test1
+	test2
+
 	puts "
+
 	==============
 	test completed
 	==============
 	"
 end
-
 test
