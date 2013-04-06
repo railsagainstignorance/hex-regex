@@ -134,7 +134,7 @@ end
 # - .next will iterate over the chain of FREs until it is exhausted, then iterate over the length of chain until likewise
 
 class FragmentRepeater
-	attr_reader :current
+	attr_reader :current, :fragment_pieces_ratio
 
 	@@EMPTY_FRAGMENT = ''
 
@@ -161,10 +161,20 @@ class FragmentRepeater
 
 		@index = @start_index - 1
 		@repeater_element = nil
+
+		@fragment_pieces_ratio = 1
+		if !@fragment_spec[:fragment_pieces].nil?
+			sorted_pieces = @fragment_spec[:fragment_pieces].sort { |x,y| x.length <=> y.length }
+			longest  = sorted_pieces.last.length
+			shortest = sorted_pieces.first.length
+			if shortest > 0
+				@fragment_pieces_ratio = longest / shortest
+			end	
+		end
 	end
 
 	def to_s
-		"FragmentRepeater: @fragment_spec=#{@fragment_spec}, @start_index=#{@start_index}, @end_index=#{@end_index}, @index=#{@index}"
+		"FragmentRepeater: @fragment_spec=#{@fragment_spec}, @start_index=#{@start_index}, @end_index=#{@end_index}, @index=#{@index}, @fragment_pieces_ratio=#{@fragment_pieces_ratio}"
 	end
 
 	def next(backreferences)
@@ -323,6 +333,7 @@ class FragmentChainElement
 		@count_next               = 0
 		@fce_chain                = nil
 		@should_have_no_chain     = @fragment_specs_for_chain.empty?
+		@fragment_pieces_ratio    = @fragment_repeater.fragment_pieces_ratio
 	end
 
 	def next(backreferences, remaining_length)
@@ -337,8 +348,8 @@ class FragmentChainElement
 
 		if @should_have_no_chain
 			@current = @fragment_repeater.next(backreferences)
-			# TODO: yes, but what about if the current.length > remaining_length and keeps getting longer (e.g. with repeat element)?
-			while ! @current.nil? and remaining_length >= 0 and @current.length < remaining_length
+			# because there is no subsequent chain, we know this FCE has to fit the remaining_length exactly
+			while ! @current.nil? and remaining_length >= 0 and @current.length <= (remaining_length * @fragment_pieces_ratio) and @current.length != remaining_length
 				@current = @fragment_repeater.next(backreferences) 					
 			end
 
@@ -355,8 +366,8 @@ class FragmentChainElement
 		end
 	
 		stop_runaway = 0
-		# check we have a @current which fits within the remaining_length
-		if ! @current.nil? and remaining_length >= 0 and @current.length > remaining_length
+		# check we have a @current which fits within the remaining_length (give or take the ratio)
+		if ! @current.nil? and remaining_length >= 0 and @current.length > (remaining_length * @fragment_pieces_ratio) 
 			# assume any further nexts will only get longer...
 			@current = nil
 		end
@@ -384,13 +395,13 @@ class FragmentChainElement
 
 		#puts "DEBUG: FragmentChainElement.next: after chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, chain_next=#{chain_next}"
 		stop_runaway = 0
-		while stop_runaway<@@FCE_COUNT_MAX and chain_next.nil? and ! @current.nil? and (remaining_length < 0 or (remaining_length - @current.length) >= 0)
+		while stop_runaway<@@FCE_COUNT_MAX and chain_next.nil? and ! @current.nil? and (remaining_length < 0 or (@current.length <= (remaining_length * @fragment_pieces_ratio)))
 			stop_runaway += 1
 			prev_current = @current
 			@current = @fragment_repeater.next(backreferences)
 			if !@current.nil? and remaining_length >= 0 and @current.length > remaining_length
-				# assume any further nexts will only get longer...
-				@current = nil
+				# as long as we have not gone past the ratio, we may still get shorter nexts so don't give up
+				next
 			end
 			#puts "DEBUG: FragmentChainElement.next: in while: stop_runaway=#{stop_runaway}, @@FCE_COUNT_MAX=#{@@FCE_COUNT_MAX}, @current=#{@current}, remaining_length=#{remaining_length}, @current.length=#{@current.nil? or @current.length}"
 			
@@ -487,8 +498,11 @@ end
 #
 # ToDo
 # - debug results of the regex counts, e.g. regex='[CR]*', 8. Loses the plot after 256. DONE
-# - debug regex='N.*X.X.X.*E', 9
-# - debug regex='[CEIMU]*OH[AEMOR]*', 10
+# - debug regex='N.*X.X.X.*E', 9. DONE
+# - debug regex='[CEIMU]*OH[AEMOR]*', 10. DONE
+# - debug regex=regex_string=(S|MM|HHH)*, target_length=7, FragmentChainer.count: count=3, final_current=MMHHHMM, count=3
+#  - the FG does not emit nexts in size order
+#  - IDEA: in the FG (or the fragment_parser, or the *FragmentRepeater*?), calculate the ratio of longest to shortest fragment_pieces, and that gives the multiple for how much more than remaining_length we wait for
 
 def test1
 	fragmentGen = FragmentGen.new({
@@ -627,8 +641,8 @@ def test2
 		['[CR]*', 8],
 		['R*D*M*', 8],
 		['NA*E', 9],
-		#['N.*X.X.X.*E', 9],
-		#['[CEIMU]*OH[AEMOR]*', 10],
+		['N.*X.X.X.*E', 9],
+		['[CEIMU]*OH[AEMOR]*', 10],
 		['(S|MM|HHH)*', 7]
 	].each {|pair| 
 		regex_string = pair[0]
@@ -639,6 +653,21 @@ def test2
 		count = fragment_chainer.count
 		puts "    count=#{count}" 
 	}
+
+	#puts "\n---"
+
+	#fragmentRepeater = FragmentRepeater.new({
+	#	:fragment_pieces => ['S', 'MM', 'HHH'],
+	#	:repeat_char     => '*',
+	#	:backreference   => false,
+	#	:capture         => false,
+	#	:repeat_from     => 0
+	#})
+
+	#puts fragmentRepeater.to_s
+	#puts "fragmentRepeater.nexts: "
+	#(1..300).each { |e| puts "#{e.to_s}." + (fragmentRepeater.next([]) || 'nil') }
+
 end
 
 def test
