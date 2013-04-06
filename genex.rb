@@ -317,47 +317,68 @@ class FragmentChainElement
 		@fragment_spec 			  = fragment_specs.shift
 		@fragment_specs_for_chain = fragment_specs
 		@fragment_repeater        = FragmentRepeater.new(@fragment_spec)
-		generate_chain
 		@current                  = nil
 		@is_first_next            = true
+		@fce_chain                = nil
+		@should_have_no_chain     = @fragment_specs_for_chain.empty?
 	end
 
-	def next(backreferences)
-		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
+	def next(backreferences, remaining_length)
+		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}"
 
-		return nil if @current.nil? and ! @is_first_next
-		@is_first_next = false
-
-		if @chain.nil?
-			chain_next = ''
-			@current = @fragment_repeater.next(backreferences)
-			#puts "DEBUG: FragmentChainElement.next: @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
-		else
-			if @current.nil?
-				@current = @fragment_repeater.next(backreferences)
-				return nil if @current.nil?
-			end
-			
-			if @fragment_spec[:capture]
-				backreferences.push(@current)
-			end
-			
-			chain_next = @chain.next(backreferences)
-
-			#puts "DEBUG: FragmentChainElement.next: ! @chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
-			if chain_next.nil?
-				@current = @fragment_repeater.next(backreferences)
-				if ! @current.nil?
-					if @fragment_spec[:capture]
-						backreferences.pop
-						backreferences.push(@current)
-					end
-					generate_chain
-					chain_next = @chain.next(backreferences)	
-				end
-			end
+		if @is_first_next
+			@is_first_next = false
+		elsif @current.nil?
+			return nil
 		end
 		
+		if @should_have_no_chain
+			@current = @fragment_repeater.next(backreferences)
+			# TDOD: yes, but what about if the current.length > remainin_length and keeps getting longer (e.g. with repeat element)?
+			while ! @current.nil? and remaining_length >= 0 and @current.length != remaining_length
+				@current = @fragment_repeater.next(backreferences) 					
+			end
+
+			#puts "DEBUG: FragmentChainElement.next: @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}"
+			return @current
+		end
+
+		if @current.nil?
+			@current = @fragment_repeater.next(backreferences)				
+		end
+	
+		# check we have a @current which fits within the remaining_length
+		while ! @current.nil? and remaining_length >= 0
+			if (remaining_length - @current.length) < 0
+				@current = @fragment_repeater.next(backreferences) 					
+			end
+		end
+
+		# have we come up with a non-nil @current ?
+		return nil if @current.nil?
+
+		if @fragment_spec[:capture]
+			backreferences.push(@current)
+		end
+
+		generate_chain if @fce_chain.nil?
+		chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)
+
+		#puts "DEBUG: FragmentChainElement.next: ! @fce_chain.nil? :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, chain_next=#{chain_next}"
+		
+		while chain_next.nil? and ! @current.nil? and (remaining_length < 0 or (remaining_length - @current.length) >= 0)
+			
+			@current = @fragment_repeater.next(backreferences)
+			if ! @current.nil?
+				if @fragment_spec[:capture]
+					backreferences.pop
+					backreferences.push(@current)
+				end
+				generate_chain
+				chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)	
+			end
+		end
+				
 		return nil if chain_next.nil? or @current.nil?
 
 		#puts "DEBUG: FragmentChainElement.next: out :id=#{@fragment_spec[:id]}, @current=#{@current}, chain_next=#{chain_next}"
@@ -365,14 +386,14 @@ class FragmentChainElement
 	end
 
 	def to_s
-		"FragmentChainElement: @fragment_spec=#{@fragment_spec}, @current=#{@current}, @is_first_next=#{@is_first_next},\n                      @fragment_repeater=#{@fragment_repeater}\n@chain=#{@chain.to_s}"
+		"FragmentChainElement: @fragment_spec=#{@fragment_spec}, @current=#{@current}, @is_first_next=#{@is_first_next},\n                      @fragment_repeater=#{@fragment_repeater}\n@fce_chain=#{@fce_chain.to_s}"
 	end
 
 	def generate_chain
 		if ! @fragment_specs_for_chain.empty?
-			@chain = FragmentChainElement.new(Array.new(@fragment_specs_for_chain))
+			@fce_chain = FragmentChainElement.new(Array.new(@fragment_specs_for_chain))
 		else
-			@chain = nil
+			@fce_chain = nil
 		end
 	end
 end
@@ -386,40 +407,44 @@ end
 #  - returns the concatenated string fragments
 
 class FragmentChainer
-	def initialize(regex_string)
-		@regex_string = regex_string
+	def initialize(regex_string, target_length = -1)
+		@regex_string   = regex_string
 		@fragment_specs = FragmentParser.parse_regex(@regex_string)
-		#@fragment_repeaters = @fragment_specs.map { |fspec| FragmentRepeater.new(fspec) }
-		@chain = FragmentChainElement.new(Array.new(@fragment_specs))
-		@current = nil
-		@is_first_next = true
+		@fce_chain          = FragmentChainElement.new(Array.new(@fragment_specs))
+		@current        = nil
+		@is_first_next  = true
+		@target_length  = target_length
 	end
 
 	def to_s
-		"FragmentChainer: regex_string=\'#{@regex_string}\', @is_first_next=#{@is_first_next},\n" + @fragment_specs.join("\n") + ",\n@chain=#{@chain.to_s}"
+		"FragmentChainer: regex_string=\'#{@regex_string}\', @is_first_next=#{@is_first_next},\n" + @fragment_specs.join("\n") + ",\n@fce_chain=#{@fce_chain.to_s}"
 	end
 
 	def next
 		return nil if !@is_first_next and @current.nil?
 		@is_first_next = false
 
-		return nil if @chain.nil?
+		return nil if @fce_chain.nil?
 
-		@current = @chain.next( backreferences = [] )
+		@current = @fce_chain.next( backreferences = [], remaining_length = @target_length )
 	end
 end
 
 #
 # ToDo
-# - consume backreferences (in FragmentGen, so pass list of backrefs through stack)
-#  - refactor FragmentRepeaterElement and FragmentGen to pass fragment_spec, and for FragmentGen to return a backreference as a value !!!. DONE
-#  - fix bug where regex_string='(AA)B(B)C*D?E?F?G\1' only generates nil after first next
-# - create  backreferences (in FragmentChainer?). DONE
-# - how to iterate over list of FragmentRepeaters? Perhaps chain chainers? DONE
-# - fix bug where ABC+ matches as (?:ABC)+. DONE
 # - specify/limit overall generated string length
-# - fix bug where next is not iterating over different values. DONE
-# - fix bug for "ABC+" starting with "ABCC" and "ABC* starting with "ABC",DONE also barfing on "AB?C"DONE, "ABC"DONE, "A"DONE. ALL DONE
+#  - IDEA: pass in remaining_length, where <0 => unlimited, 0 => must produce no more chars (but still match regex), >1 => must produce this num of chars
+#   - Q: needs to allow for repeat_char=? or * in subsequent FCEs, but, how do we stop a * from iterating 4e4? 
+#     - pre-sort :fragment_pieces?
+#     - Q: but even with A*, how do say no more? 
+#     - Q: Can we say a chain_next is only going to stay same length or get longer?
+#   - Q: will the final FragmentChainElement make the judgement call on whether the overall string is a match on length?
+#   - Q: will it be possible to keep the length checking at the FragmentChainElement level? Hopefully yes.
+#   - Q: will there be a need to have a filter at the FragmentChainer level to check on string length? Hopefully not.
+#  - IDEA: define a adhere_to_precise_length var in start of FCE.next call, to make it clean/clear if we need to worry about length in rest of def
+#   - probably needs several length checks in next def
+#  - specify target length in FCE.inititialize. It doesn't sense for it to change from .next to .next. Then pass remaining_length through stack.
+# - check backreferences pop/push stack for later chain pushes not being popped when unwinding back to earlier in the chain.
 
 def test
 	STDOUT.sync = true
