@@ -336,10 +336,11 @@ class FragmentChainElement
 		@fce_chain                = nil
 		@should_have_no_chain     = @fragment_specs_for_chain.empty?
 		@fragment_pieces_ratio    = @fragment_repeater.fragment_pieces_ratio
+		@longest_current_with_a_chain_next = 0
 	end
 
 	def next(backreferences, remaining_length)
-		puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}, @should_have_no_chain=#{@should_have_no_chain}, @fragment_pieces_ratio=#{@fragment_pieces_ratio}"
+		puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}, @should_have_no_chain=#{@should_have_no_chain}, @fragment_pieces_ratio=#{@fragment_pieces_ratio}, @longest_current_with_a_chain_next=#{@longest_current_with_a_chain_next}"
 		return nil if @count_next > @@FCE_COUNT_MAX
 
 		if @count_next > 0 and @current.nil?
@@ -401,9 +402,15 @@ class FragmentChainElement
 			stop_runaway += 1
 			prev_current = @current
 			@current = @fragment_repeater.next(backreferences)
-			if !@current.nil? and remaining_length >= 0 and @current.length > remaining_length
-				# as long as we have not gone past the ratio, we may still get shorter nexts so don't give up
-				next
+			if !@current.nil?
+				if remaining_length >= 0 and @current.length > remaining_length
+					# as long as we have not gone past the ratio, we may still get shorter nexts so don't give up
+					next
+				end
+				# need to only do this if the prev did not achieve a non nil chain_next
+				if (prev_current.length == @current.length) and (@current.length < @longest_current_with_a_chain_next)
+					next
+				end
 			end
 			#puts "DEBUG: FragmentChainElement.next: in while: stop_runaway=#{stop_runaway}, @@FCE_COUNT_MAX=#{@@FCE_COUNT_MAX}, @current=#{@current}, remaining_length=#{remaining_length}, @current.length=#{@current.nil? or @current.length}"
 			
@@ -422,10 +429,6 @@ class FragmentChainElement
 				generate_chain
 				#puts "DEBUG: FragmentChainElement.next: loop chain_next :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @current.length=#{@current.length}, @count_next=#{@count_next}"
 				chain_next = @fce_chain.next(backreferences, remaining_length - @current.length)	
-
-				if (prev_current.length == @current.length) and chain_next.nil?
-					@current = nil
-				end
 			end
 		end
 
@@ -436,7 +439,10 @@ class FragmentChainElement
 				
 		return nil if chain_next.nil? or @current.nil?
 
-		
+		if @current.length > @longest_current_with_a_chain_next
+			@longest_current_with_a_chain_next = @current.length
+		end
+	
 		#puts "DEBUG: FragmentChainElement.next: out :id=#{@fragment_spec[:id]}, @current=#{@current}, chain_next=#{chain_next}"
 		return @current + chain_next
 	end
