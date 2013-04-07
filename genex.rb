@@ -245,7 +245,7 @@ class FragmentParser
 			fragment_string        = $1
 			repeat_char            = $2
 			remaining_regex_string = $3
-		when /^\((\.+)#{anyrepeat}\)(.*)$/
+		when /^\((\.+)#{anyrepeat}?\)(.*)$/
 			# can parse: (...?), i.e. storing the match for later use, with optional modifiers [*+?] within the braces
 			fragment_string        = $1
 			repeat_char            = $2
@@ -503,6 +503,8 @@ end
 # - debug regex=regex_string=(S|MM|HHH)*, target_length=7, FragmentChainer.count: count=3, final_current=MMHHHMM, count=3
 #  - the FG does not emit nexts in size order
 #  - IDEA: in the FG (or the fragment_parser, or the *FragmentRepeater*?), calculate the ratio of longest to shortest fragment_pieces, and that gives the multiple for how much more than remaining_length we wait for
+# - debug: cannot parse 'P+(..)\1.*', or '.*(.)C\1X\1.*'
+# - debug: crashes: '(RR|HHH)*.?'
 
 def test1
 	fragmentGen = FragmentGen.new({
@@ -641,9 +643,13 @@ def test2
 		['[CR]*', 8],
 		['R*D*M*', 8],
 		['NA*E', 9],
-		['N.*X.X.X.*E', 9],
-		['[CEIMU]*OH[AEMOR]*', 10],
-		['(S|MM|HHH)*', 7]
+		#['N.*X.X.X.*E', 9],
+		#['[CEIMU]*OH[AEMOR]*', 10],
+		['(S|MM|HHH)*', 7],
+		['[AM]*CM(RC)*R?', 12],
+		['P+(..)\1.*', 5],
+		['.*(.)C\1X\1.*', 7],
+		['(RR|HHH)*.?']
 	].each {|pair| 
 		regex_string = pair[0]
 		target_length = pair[1]
@@ -653,7 +659,9 @@ def test2
 		count = fragment_chainer.count
 		puts "    count=#{count}" 
 	}
+end
 
+def test_parsedotdot
 	#puts "\n---"
 
 	#fragmentRepeater = FragmentRepeater.new({
@@ -668,6 +676,21 @@ def test2
 	#puts "fragmentRepeater.nexts: "
 	#(1..300).each { |e| puts "#{e.to_s}." + (fragmentRepeater.next([]) || 'nil') }
 
+	puts "----"
+	FragmentParser.reset_id
+	
+	[
+	 #'(AA)B(B)C*D?E?F?G\1\2',
+	 #'(ZZZZ|AA|BB)C?D*E+\1',
+	 #'[CR]*',
+	 'P+',
+	 '(..)',
+	 'P+(..)\1.*',
+	 '.*(.)C\1X\1.*',
+	 '(RR|HHH)*.?',
+	].each { |regex_string|
+		puts "FragmentParser.parse_regex(\'#{regex_string}\''):\n" + FragmentParser.parse_regex(regex_string).join("\n")
+	}
 end
 
 def test
@@ -676,6 +699,7 @@ def test
 	puts "test started:\n"
 
 #	test1
+#	test_parsedotdot
 	test2
 
 	puts "

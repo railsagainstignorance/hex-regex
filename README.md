@@ -86,5 +86,6 @@ ToDo
 - implement backreferences. DONE
  - pass backreferences in via next from FragmentChainElement. DONE
  - test next via FragmentChainer. DONE
-- how to specify/enforce a precise limit on string length. A new param to pass through?
-- specify/limit overall generated string length
+- how to specify/enforce a precise limit on string length. A new param to pass through?. DONE
+- specify/limit overall generated string length. DONE
+- test against known regexs to see if count is correct. Lots of subtle gotchas.
