@@ -168,8 +168,10 @@ class FragmentRepeater
 			longest  = sorted_pieces.last.length
 			shortest = sorted_pieces.first.length
 			if shortest > 0
-				@fragment_pieces_ratio = longest / shortest
+				@fragment_pieces_ratio = longest.to_f / shortest.to_f
 			end	
+
+			#puts "DEBUG: FragmentParser.initialize: @fragment_pieces_ratio=#{@fragment_pieces_ratio}, longest=#{longest}, shortest=#{shortest}, sorted_pieces=#{sorted_pieces}"
 		end
 	end
 
@@ -337,7 +339,7 @@ class FragmentChainElement
 	end
 
 	def next(backreferences, remaining_length)
-		#puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}, @should_have_no_chain=#{@should_have_no_chain}"
+		puts "DEBUG: FragmentChainElement.next: in :id=#{@fragment_spec[:id]}, :string=#{@fragment_spec[:fragment_string]}, @current=#{@current}, backreferences=#{backreferences}, remaining_length=#{remaining_length}, @count_next=#{@count_next}, @should_have_no_chain=#{@should_have_no_chain}, @fragment_pieces_ratio=#{@fragment_pieces_ratio}"
 		return nil if @count_next > @@FCE_COUNT_MAX
 
 		if @count_next > 0 and @current.nil?
@@ -462,6 +464,9 @@ end
 
 class FragmentChainer
 	def initialize(regex_string, target_length = -1)
+		abort "Error: FragmentChainer.initialize: nil regex_string" if regex_string.nil?
+		abort "Error: FragmentChainer.initialize: nil target_length" if target_length.nil?
+
 		@regex_string   = regex_string
 		@fragment_specs = FragmentParser.parse_regex(@regex_string)
 		@fce_chain          = FragmentChainElement.new(Array.new(@fragment_specs))
@@ -500,11 +505,13 @@ end
 # - debug results of the regex counts, e.g. regex='[CR]*', 8. Loses the plot after 256. DONE
 # - debug regex='N.*X.X.X.*E', 9. DONE
 # - debug regex='[CEIMU]*OH[AEMOR]*', 10. DONE
-# - debug regex=regex_string=(S|MM|HHH)*, target_length=7, FragmentChainer.count: count=3, final_current=MMHHHMM, count=3
+# - debug regex=regex_string=(S|MM|HHH)*, target_length=7, FragmentChainer.count: count=3, final_current=MMHHHMM, count=3. DONE
 #  - the FG does not emit nexts in size order
-#  - IDEA: in the FG (or the fragment_parser, or the *FragmentRepeater*?), calculate the ratio of longest to shortest fragment_pieces, and that gives the multiple for how much more than remaining_length we wait for
-# - debug: cannot parse 'P+(..)\1.*', or '.*(.)C\1X\1.*'
-# - debug: crashes: '(RR|HHH)*.?'
+#  - IDEA: in the FG (or the fragment_parser, or the *FragmentRepeater*?), calculate the ratio of longest to shortest fragment_pieces, and that gives the multiple for how much more than remaining_length we wait for. DONE
+# - debug: cannot parse 'P+(..)\1.*', or '.*(.)C\1X\1.*'. DONE
+# - debug: crashes: '(RR|HHH)*.?'.DONE
+# - debug: '(RR|HHH)*.?', 7 -> count=0. OK for remaining_legth=6, but not 7.
+#  - also ['(RR|HHH)*', 7] only finds count=2, missing the one with HHHRRRR. DONE
 
 def test1
 	fragmentGen = FragmentGen.new({
@@ -639,20 +646,23 @@ end
 def test2
 	puts "\n----"
 	[
-		['.(C|HH)*', 7],
-		['[CR]*', 8],
-		['R*D*M*', 8],
-		['NA*E', 9],
+		#['.(C|HH)*', 7],
+		#['[CR]*', 8],
+		#['R*D*M*', 8],
+		#['NA*E', 9],
 		#['N.*X.X.X.*E', 9],
 		#['[CEIMU]*OH[AEMOR]*', 10],
-		['(S|MM|HHH)*', 7],
-		['[AM]*CM(RC)*R?', 12],
-		['P+(..)\1.*', 5],
-		['.*(.)C\1X\1.*', 7],
-		['(RR|HHH)*.?']
+		#['(S|MM|HHH)*', 7],
+		#['[AM]*CM(RC)*R?', 12],
+		#['P+(..)\1.*', 5],
+		#['.*(.)C\1X\1.*', 7],
+		['(RR|HHH)*', 6],
+		['(RR|HHH)*.?', 6],
+		['(RR|HHH)*.?', 7],
 	].each {|pair| 
 		regex_string = pair[0]
 		target_length = pair[1]
+		FragmentParser.reset_id
 		fragment_chainer = FragmentChainer.new(regex_string, target_length)
 		puts "regex_string=#{regex_string}, target_length=#{target_length}"
 		#fragment_chainer=#{fragment_chainer}"
@@ -693,6 +703,23 @@ def test_parsedotdot
 	}
 end
 
+def test_RRHHH
+	puts "\n---"
+
+	fragmentRepeater = FragmentRepeater.new({
+		:fragment_pieces => ['RR', 'HHH'],
+		:repeat_char     => '*',
+		:backreference   => false,
+		:capture         => false,
+		:repeat_from     => 0
+	})
+
+	puts fragmentRepeater.to_s
+	puts "fragmentRepeater.nexts: "
+	(1..30).each { |e| printf "%3d) %s\n", e, (fragmentRepeater.next([]) || 'nil') }
+
+end
+
 def test
 	STDOUT.sync = true
 
@@ -701,7 +728,7 @@ def test
 #	test1
 #	test_parsedotdot
 	test2
-
+#	test_RRHHH
 	puts "
 
 	==============
